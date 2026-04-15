@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>OTP Verification | The Sacred Hearth</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container": "#efeeea",
+            "inverse-primary": "#95d4b3",
+            "on-error": "#ffffff",
+            "tertiary": "#540012",
+            "primary-container": "#00452e",
+            "surface-container-lowest": "#ffffff",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface-bright": "#fbf9f5",
+            "outline": "#717973",
+            "surface-variant": "#e4e2de",
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "on-background": "#1b1c1a",
+            "on-secondary": "#ffffff",
+            "surface-container-high": "#eae8e4",
+            "primary-fixed": "#b1f0ce",
+            "surface-dim": "#dbdad6",
+            "primary-fixed-dim": "#95d4b3",
+            "on-surface": "#1b1c1a",
+            "outline-variant": "#c1c8c2",
+            "error-container": "#ffdad6",
+            "primary": "#002d1c",
+            "on-secondary-fixed": "#241a00",
+            "on-secondary-fixed-variant": "#574500",
+            "on-primary": "#ffffff",
+            "on-primary-container": "#76b394",
+            "error": "#ba1a1a",
+            "background": "#fbf9f5",
+            "surface-container-highest": "#e4e2de",
+            "on-tertiary-container": "#ff7f87",
+            "on-secondary-container": "#745c00",
+            "surface-tint": "#2c694e",
+            "surface": "#fbf9f5",
+            "tertiary-container": "#7d001f",
+            "on-primary-fixed-variant": "#0e5138",
+            "on-surface-variant": "#414844",
+            "inverse-surface": "#30312e",
+            "on-primary-fixed": "#002114",
+            "surface-container-low": "#f5f3ef",
+            "secondary-fixed": "#ffe088",
+            "inverse-on-surface": "#f2f0ed",
+            "tertiary-fixed": "#ffdada",
+            "on-error-container": "#93000a",
+            "secondary-fixed-dim": "#e9c349",
+            "secondary": "#735c00",
+            "on-tertiary": "#ffffff",
+            "secondary-container": "#fed65b",
+            "on-tertiary-fixed": "#40000b"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-panel {
+      background: rgba(44, 105, 78, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+
+<body class="bg-surface font-body text-on-surface min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
+
+<!-- Aesthetic Background Elements -->
+<div class="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
+  <div class="absolute -top-24 -left-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+  <div class="absolute -bottom-24 -right-24 w-[30rem] h-[30rem] bg-secondary/5 rounded-full blur-3xl"></div>
+</div>
+
+<!-- Content Wrapper -->
+<main class="w-full max-w-xl px-6 relative z-10">
+  
+  <!-- Brand Identity Header -->
+  <div class="text-center mb-12">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-6 shadow-xl shadow-primary/10">
+      <span class="material-symbols-outlined text-on-primary text-3xl" style="font-variation-settings: 'FILL' 1;">church</span>
+    </div>
+    <h1 class="font-headline text-4xl md:text-5xl font-bold text-primary tracking-tight mb-4">The Sacred Hearth</h1>
+    <p class="font-body text-on-surface-variant max-w-sm mx-auto text-lg">Verification of your digital presence within the Okitipupa Sanctuary.</p>
+  </div>
+
+  <!-- Verification Card -->
+  <section class="bg-surface-container-lowest rounded-xl p-8 md:p-12 shadow-[30px_0_60px_-15px_rgba(0,45,28,0.06)] border border-outline-variant/10">
+    <div class="flex flex-col items-center">
+      
+      <div class="mb-8 text-center">
+        <h2 class="font-headline text-2xl font-bold text-primary mb-2">Secure Access</h2>
+        <p class="text-on-surface-variant text-sm">
+          We've sent a 6-digit code to your registered 
+          <span id="contact-mask" class="font-semibold">mobile device</span>.
+        </p>
+      </div>
+
+      <!-- Dynamic Status Message Container -->
+      <div id="otp-status" class="w-full mb-4 p-3 rounded-lg text-sm hidden"></div>
+
+      <!-- OTP Form -->
+      <form id="otp-form" class="w-full">
+        <!-- OTP Input Fields (6-Digit) -->
+        <div class="grid grid-cols-6 gap-3 md:gap-4 mb-10 w-full">
+          <input id="otp-1" name="otp1" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
+          <input id="otp-2" name="otp2" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
+          <input id="otp-3" name="otp3" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
+          <input id="otp-4" name="otp4" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
+          <input id="otp-5" name="otp5" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
+          <input id="otp-6" name="otp6" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
+        </div>
+
+        <!-- Hidden field for combined OTP -->
+        <input type="hidden" id="otp-combined" name="otp"/>
+
+        <!-- Verify Button -->
+        <button id="verify-btn" class="w-full bg-primary hover:bg-primary-container text-on-primary py-4 rounded-full font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group transition-all transform active:scale-95" type="submit">
+          Verify Identity
+          <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+        </button>
+      </form>
+
+      <!-- Timer & Resend -->
+      <div class="mt-8 flex flex-col items-center gap-4">
+        <div class="flex items-center gap-2 px-4 py-2 bg-secondary-container/30 rounded-full">
+          <span class="material-symbols-outlined text-on-secondary-container text-sm">schedule</span>
+          <span class="text-on-secondary-container font-medium text-sm">
+            Resend code in <span id="timer-display" class="font-bold">02:44</span>
+          </span>
+        </div>
+        <button id="resend-btn" class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          Didn't receive a code? <span class="underline decoration-outline-variant">Resend Code</span>
+        </button>
+      </div>
+      
+    </div>
+  </section>
+
+  <!-- Footer Decoration -->
+  <footer class="mt-12 text-center">
+    <p class="text-on-surface-variant/60 text-xs font-medium tracking-widest uppercase">Okitipupa Digital Sanctuary • Administration Portal</p>
+    <div class="mt-8 flex justify-center gap-6">
+      <div class="w-12 h-1 bg-primary/10 rounded-full"></div>
+      <div class="w-12 h-1 bg-secondary/20 rounded-full"></div>
+      <div class="w-12 h-1 bg-primary/10 rounded-full"></div>
+    </div>
+  </footer>
+</main>
+
+<!-- Side Decoration (Asymmetric Element) -->
+<div class="hidden lg:block absolute -right-20 top-1/2 -translate-y-1/2 opacity-20 rotate-12">
+  <div class="bg-surface-container-high p-4 rounded-3xl rotate-[-6deg]">
+    <img class="w-64 h-96 object-cover rounded-2xl grayscale hover:grayscale-0 transition-all duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIbPd4aMBMEUHWrpOUcfOzVRUwny5FxgSxRaLQUs3ND7sZqcWOFeGK5lmUF6PDufKkd9faOxfJkECQ8ji_zQFZeQoq9JQaMgOmv1yU0tc50epwJo-k-hSy5Td2wr3xUkAVnixIR2BLa0_8lc-zN3WpZhJTTdmAkQXy_T51cKmQisXkiKH8ag7KE4txZqNQDkqArkLBmR2ssxBgJ7K096QkcyT5BOwIsRRxhjEwakyhMjMZP6pXMBf-_1x575tE7U2PPl6RxRAnmiA" alt="Church interior with sunlight streaming through windows">
+  </div>
+</div>
+
+</body>
+</html>
