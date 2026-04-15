@@ -234,8 +234,16 @@
           <input id="edit-caption" name="caption" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant rounded-t-lg p-3 focus:ring-0 focus:border-primary transition-colors font-medium" type="text"/>
         </div>
         <div>
+          <label class="block text-sm font-bold text-primary mb-2" for="edit-category">Category</label>
+          <input id="edit-category" name="category" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant rounded-t-lg p-3 focus:ring-0 focus:border-primary transition-colors font-medium" type="text" placeholder="e.g., Service, Youth"/>
+        </div>
+        <div>
           <label class="block text-sm font-bold text-primary mb-2" for="edit-description">Description</label>
           <textarea id="edit-description" name="description" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant rounded-t-lg p-3 focus:ring-0 focus:border-primary transition-colors font-medium" rows="4"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-primary mb-2" for="edit-display-order">Display Order</label>
+          <input id="edit-display-order" name="display_order" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant rounded-t-lg p-3 focus:ring-0 focus:border-primary transition-colors font-medium" type="number" min="0" step="1" value="0"/>
         </div>
         <div class="flex items-center gap-2">
           <input id="edit-featured" name="featured" class="rounded text-primary focus:ring-primary" type="checkbox"/>

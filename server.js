@@ -736,6 +736,474 @@ app.get('/api/finance/transactions', authenticate, (req, res) => {
     });
 });
 
+// ==================== ADMIN PROGRAMS CRUD ====================
+app.get('/api/admin/programs', authenticate, (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const status = typeof req.query.status === 'string' && req.query.status ? req.query.status : null;
+  const category = typeof req.query.category === 'string' && req.query.category && req.query.category !== 'all' ? req.query.category : null;
+
+  const whereParts = [];
+  const params = [];
+  if (status) {
+    whereParts.push('status = ?');
+    params.push(status);
+  }
+  if (category) {
+    whereParts.push('category = ?');
+    params.push(category);
+  }
+  if (search) {
+    whereParts.push('(title LIKE ? OR description LIKE ? OR location LIKE ?)');
+    const like = `%${search}%`;
+    params.push(like, like, like);
+  }
+  const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+  db.query(
+    `SELECT id, title, type, category, location, start_datetime, end_datetime, status, is_main_service, is_featured, display_order, created_at
+     FROM programs
+     ${whereSql}
+     ORDER BY start_datetime DESC, id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+    (err, results) => {
+      if (err) return res.status(500).json({ message: err.message });
+      db.query(`SELECT COUNT(*) as total FROM programs ${whereSql}`, params, (e, count) => {
+        if (e) return res.status(500).json({ message: e.message });
+        const total = count[0].total;
+        res.json({
+          items: results,
+          total,
+          page,
+          totalPages: Math.ceil(total / limit),
+          from: offset + 1,
+          to: Math.min(offset + limit, total)
+        });
+      });
+    }
+  );
+});
+
+app.get('/api/admin/programs/stats', authenticate, (req, res) => {
+  db.query(
+    `SELECT 
+      SUM(status='upcoming') as upcoming,
+      SUM(status='ongoing') as ongoing,
+      SUM(status='completed') as completed,
+      SUM(status='cancelled') as cancelled,
+      COUNT(*) as total
+    FROM programs`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.json(rows[0] || {});
+    }
+  );
+});
+
+app.get('/api/admin/programs/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid program id' });
+  db.query('SELECT * FROM programs WHERE id = ?', [id], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (!rows[0]) return res.status(404).json({ message: 'Program not found' });
+    res.json(rows[0]);
+  });
+});
+
+app.post('/api/admin/programs', authenticate, (req, res) => {
+  const {
+    title,
+    description,
+    type,
+    category,
+    location,
+    start_datetime,
+    end_datetime,
+    recurring,
+    recurring_until,
+    schedule,
+    is_main_service,
+    is_featured,
+    status,
+    display_order
+  } = req.body || {};
+
+  if (typeof title !== 'string' || title.trim().length < 3) return res.status(400).json({ message: 'Title is required' });
+  if (!start_datetime) return res.status(400).json({ message: 'Start date/time is required' });
+
+  db.query(
+    `INSERT INTO programs
+      (title, description, type, category, location, start_datetime, end_datetime, recurring, recurring_until, schedule, is_main_service, is_featured, status, display_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      title.trim(),
+      description || null,
+      type || 'service',
+      category || null,
+      location || null,
+      start_datetime,
+      end_datetime || null,
+      recurring || 'none',
+      recurring_until || null,
+      schedule || null,
+      is_main_service ? 1 : 0,
+      is_featured ? 1 : 0,
+      status || 'upcoming',
+      Number.isFinite(Number(display_order)) ? Number(display_order) : 0
+    ],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.status(201).json({ id: result.insertId, message: 'Program created' });
+    }
+  );
+});
+
+app.put('/api/admin/programs/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid program id' });
+
+  const allowed = [
+    'title', 'description', 'type', 'category', 'location', 'start_datetime', 'end_datetime',
+    'recurring', 'recurring_until', 'schedule', 'is_main_service', 'is_featured', 'status', 'display_order'
+  ];
+  const fields = {};
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) fields[key] = req.body[key];
+  }
+  if (fields.title && (typeof fields.title !== 'string' || fields.title.trim().length < 3)) {
+    return res.status(400).json({ message: 'Invalid title' });
+  }
+
+  const sets = Object.keys(fields).map(k => `${k} = ?`);
+  if (sets.length === 0) return res.status(400).json({ message: 'No changes provided' });
+  const params = Object.keys(fields).map(k => {
+    if (k === 'is_main_service' || k === 'is_featured') return fields[k] ? 1 : 0;
+    if (k === 'display_order') return Number.isFinite(Number(fields[k])) ? Number(fields[k]) : 0;
+    if (typeof fields[k] === 'string') return fields[k].trim();
+    return fields[k];
+  });
+  params.push(id);
+
+  db.query(`UPDATE programs SET ${sets.join(', ')} WHERE id = ?`, params, (err, result) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Program not found' });
+    res.json({ message: 'Program updated' });
+  });
+});
+
+app.delete('/api/admin/programs/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid program id' });
+  db.query('DELETE FROM programs WHERE id = ?', [id], (err, result) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Program not found' });
+    res.json({ message: 'Program deleted' });
+  });
+});
+
+// ==================== ADMIN ANNOUNCEMENTS CRUD ====================
+app.get('/api/admin/announcements', authenticate, (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const status = typeof req.query.status === 'string' && req.query.status ? req.query.status : null;
+
+  const whereParts = [];
+  const params = [];
+  if (status) {
+    whereParts.push('status = ?');
+    params.push(status);
+  }
+  if (search) {
+    whereParts.push('(title LIKE ? OR summary LIKE ? OR content LIKE ?)');
+    const like = `%${search}%`;
+    params.push(like, like, like);
+  }
+  const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+  db.query(
+    `SELECT id, title, summary, category, priority, status, image_url, created_at, published_at, scheduled_for
+     FROM announcements
+     ${whereSql}
+     ORDER BY created_at DESC, id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+    (err, results) => {
+      if (err) return res.status(500).json({ message: err.message });
+      db.query(`SELECT COUNT(*) as total FROM announcements ${whereSql}`, params, (e, count) => {
+        if (e) return res.status(500).json({ message: e.message });
+        const total = count[0].total;
+        res.json({
+          items: results,
+          total,
+          page,
+          totalPages: Math.ceil(total / limit),
+          from: offset + 1,
+          to: Math.min(offset + limit, total)
+        });
+      });
+    }
+  );
+});
+
+app.get('/api/admin/announcements/stats', authenticate, (req, res) => {
+  db.query(
+    `SELECT
+      SUM(status='published') as published,
+      SUM(status='draft') as draft,
+      SUM(status='scheduled') as scheduled,
+      SUM(status='archived') as archived,
+      COUNT(*) as total
+    FROM announcements`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      const stats = rows[0] || {};
+      db.query('SELECT COUNT(*) as members FROM members', (e, m) => {
+        if (e) return res.status(500).json({ message: e.message });
+        stats.totalReach = m[0]?.members || 0;
+        res.json(stats);
+      });
+    }
+  );
+});
+
+app.get('/api/admin/announcements/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid announcement id' });
+  db.query('SELECT * FROM announcements WHERE id = ?', [id], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (!rows[0]) return res.status(404).json({ message: 'Announcement not found' });
+    res.json(rows[0]);
+  });
+});
+
+app.post('/api/admin/announcements', authenticate, (req, res) => {
+  const {
+    title,
+    summary,
+    content,
+    category,
+    image_url,
+    priority,
+    status,
+    scheduled_for,
+    is_new,
+    is_featured
+  } = req.body || {};
+
+  if (typeof title !== 'string' || title.trim().length < 3) return res.status(400).json({ message: 'Title is required' });
+  const bodyText = typeof content === 'string' ? content.trim() : '';
+  const computedSummary = typeof summary === 'string' && summary.trim()
+    ? summary.trim()
+    : (bodyText ? bodyText.substring(0, 160) : title.trim().substring(0, 160));
+
+  const finalStatus = status || 'draft';
+  const publishedAt = finalStatus === 'published' ? new Date() : null;
+
+  db.query(
+    `INSERT INTO announcements
+      (title, summary, content, category, image_url, priority, status, scheduled_for, published_at, is_new, is_featured, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      title.trim(),
+      computedSummary,
+      bodyText || null,
+      category || 'General',
+      image_url || null,
+      priority || 'normal',
+      finalStatus,
+      finalStatus === 'scheduled' ? (scheduled_for || null) : null,
+      publishedAt,
+      is_new ? 1 : 0,
+      is_featured ? 1 : 0,
+      req.userId
+    ],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.status(201).json({ id: result.insertId, message: 'Announcement created' });
+    }
+  );
+});
+
+app.put('/api/admin/announcements/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid announcement id' });
+
+  const allowed = [
+    'title', 'summary', 'content', 'category', 'image_url', 'priority', 'status', 'scheduled_for', 'is_new', 'is_featured'
+  ];
+  const fields = {};
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) fields[key] = req.body[key];
+  }
+  if (fields.title && (typeof fields.title !== 'string' || fields.title.trim().length < 3)) {
+    return res.status(400).json({ message: 'Invalid title' });
+  }
+
+  if (fields.content && !fields.summary) {
+    const t = typeof fields.content === 'string' ? fields.content.trim() : '';
+    if (t) fields.summary = t.substring(0, 160);
+  }
+
+  if (fields.status === 'published') {
+    fields.published_at = new Date();
+    fields.scheduled_for = null;
+  } else if (fields.status === 'scheduled') {
+    fields.published_at = null;
+  }
+
+  const sets = Object.keys(fields).map(k => `${k} = ?`);
+  if (sets.length === 0) return res.status(400).json({ message: 'No changes provided' });
+
+  const params = Object.keys(fields).map(k => {
+    if (k === 'is_new' || k === 'is_featured') return fields[k] ? 1 : 0;
+    if (typeof fields[k] === 'string') return fields[k].trim();
+    return fields[k];
+  });
+  params.push(id);
+
+  db.query(`UPDATE announcements SET ${sets.join(', ')} WHERE id = ?`, params, (err, result) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Announcement not found' });
+    res.json({ message: 'Announcement updated' });
+  });
+});
+
+app.delete('/api/admin/announcements/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid announcement id' });
+  db.query('DELETE FROM announcements WHERE id = ?', [id], (err, result) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Announcement not found' });
+    res.json({ message: 'Announcement deleted' });
+  });
+});
+
+// ==================== ADMIN GALLERY CRUD ====================
+app.get('/api/admin/gallery', authenticate, (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const offset = (page - 1) * limit;
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const category = typeof req.query.category === 'string' && req.query.category && req.query.category !== 'all' ? req.query.category : null;
+
+  const whereParts = [];
+  const params = [];
+  if (category) {
+    whereParts.push('category = ?');
+    params.push(category);
+  }
+  if (search) {
+    whereParts.push('(caption LIKE ? OR description LIKE ? OR category LIKE ?)');
+    const like = `%${search}%`;
+    params.push(like, like, like);
+  }
+  const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+  db.query(
+    `SELECT id, url, caption, description, category, is_featured, display_order, created_at
+     FROM gallery
+     ${whereSql}
+     ORDER BY display_order ASC, created_at DESC, id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+    (err, results) => {
+      if (err) return res.status(500).json({ message: err.message });
+      db.query(`SELECT COUNT(*) as total FROM gallery ${whereSql}`, params, (e, count) => {
+        if (e) return res.status(500).json({ message: e.message });
+        const total = count[0].total;
+        res.json({
+          items: results,
+          total,
+          page,
+          totalPages: Math.ceil(total / limit),
+          from: offset + 1,
+          to: Math.min(offset + limit, total)
+        });
+      });
+    }
+  );
+});
+
+app.get('/api/admin/gallery/stats', authenticate, (req, res) => {
+  fs.readdir(uploadsDir, { withFileTypes: true }, (err, entries) => {
+    if (err) return res.status(500).json({ message: err.message });
+    const files = entries.filter(e => e.isFile()).map(e => path.join(uploadsDir, e.name));
+    let totalBytes = 0;
+    for (const f of files) {
+      try {
+        const st = fs.statSync(f);
+        totalBytes += st.size;
+      } catch (_) {}
+    }
+    db.query('SELECT COUNT(*) as total FROM gallery', (e, rows) => {
+      if (e) return res.status(500).json({ message: e.message });
+      res.json({ totalImages: rows[0]?.total || 0, storageBytes: totalBytes });
+    });
+  });
+});
+
+app.get('/api/admin/gallery/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid image id' });
+  db.query('SELECT * FROM gallery WHERE id = ?', [id], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (!rows[0]) return res.status(404).json({ message: 'Image not found' });
+    res.json(rows[0]);
+  });
+});
+
+app.put('/api/admin/gallery/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid image id' });
+  const { caption, description, category, is_featured, display_order } = req.body || {};
+  db.query(
+    `UPDATE gallery SET caption = ?, description = ?, category = ?, is_featured = ?, display_order = ? WHERE id = ?`,
+    [
+      caption || null,
+      description || null,
+      category || null,
+      is_featured ? 1 : 0,
+      Number.isFinite(Number(display_order)) ? Number(display_order) : 0,
+      id
+    ],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ message: 'Image not found' });
+      res.json({ message: 'Image updated' });
+    }
+  );
+});
+
+app.delete('/api/admin/gallery/:id', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid image id' });
+
+  db.query('SELECT url FROM gallery WHERE id = ?', [id], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (!rows[0]) return res.status(404).json({ message: 'Image not found' });
+
+    const url = rows[0].url;
+    db.query('DELETE FROM gallery WHERE id = ?', [id], (err2) => {
+      if (err2) return res.status(500).json({ message: err2.message });
+
+      if (typeof url === 'string' && url.startsWith('/uploads/')) {
+        const filename = path.basename(url);
+        const filePath = path.join(uploadsDir, filename);
+        fs.unlink(filePath, () => {
+          // ignore errors (file might be shared or already removed)
+        });
+      }
+
+      res.json({ message: 'Image deleted' });
+    });
+  });
+});
+
 app.get('/api/finance/export', authenticate, (req, res) => {
   db.query(
     `SELECT reference, type, category, amount, description, status, payment_method, transaction_date

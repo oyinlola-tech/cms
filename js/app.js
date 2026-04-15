@@ -108,6 +108,145 @@
     return { close, overlay, form };
   }
 
+  function renderPaginationControls(container, page, totalPages, onChange) {
+    if (!container) return;
+    const current = Number(page) || 1;
+    const total = Number(totalPages) || 1;
+    if (total <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+
+    const makeBtn = (label, nextPage, disabled = false, isActive = false) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = label;
+      btn.disabled = disabled;
+      btn.className = `px-3 py-2 rounded-lg text-xs font-black transition-colors ${
+        isActive
+          ? 'bg-primary text-on-primary'
+          : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-highest'
+      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+      btn.addEventListener('click', () => onChange(nextPage));
+      return btn;
+    };
+
+    container.innerHTML = '';
+    container.appendChild(makeBtn('Prev', Math.max(1, current - 1), current === 1));
+
+    const windowSize = 5;
+    let start = Math.max(1, current - Math.floor(windowSize / 2));
+    let end = Math.min(total, start + windowSize - 1);
+    start = Math.max(1, end - windowSize + 1);
+
+    if (start > 1) container.appendChild(makeBtn('1', 1, false, current === 1));
+    if (start > 2) {
+      const dots = document.createElement('span');
+      dots.className = 'px-2 text-xs font-bold text-on-surface-variant';
+      dots.textContent = '...';
+      container.appendChild(dots);
+    }
+
+    for (let p = start; p <= end; p++) {
+      container.appendChild(makeBtn(String(p), p, false, p === current));
+    }
+
+    if (end < total - 1) {
+      const dots = document.createElement('span');
+      dots.className = 'px-2 text-xs font-bold text-on-surface-variant';
+      dots.textContent = '...';
+      container.appendChild(dots);
+    }
+    if (end < total) container.appendChild(makeBtn(String(total), total, false, current === total));
+
+    container.appendChild(makeBtn('Next', Math.min(total, current + 1), current === total));
+  }
+
+  function normalizeAdminSidebar() {
+    if (!window.location.pathname.startsWith('/admin')) return;
+    const aside = document.querySelector('aside');
+    if (!aside) return;
+
+    aside.classList.add('w-64', 'fixed', 'left-0', 'top-0', 'h-screen');
+
+    const navLinks = aside.querySelectorAll('nav a[href]');
+    navLinks.forEach(a => {
+      a.classList.remove('bg-primary', 'text-on-primary', 'text-white', 'scale-95');
+      a.classList.remove('hover:bg-surface-container-highest', 'opacity-70');
+      a.classList.add('mx-2', 'my-1', 'px-4', 'py-3', 'rounded-xl', 'transition-all', 'flex', 'items-center', 'gap-3', 'text-sm', 'font-semibold');
+      const href = a.getAttribute('href');
+      if (href && href === window.location.pathname) {
+        a.classList.add('bg-primary', 'text-on-primary');
+      } else {
+        a.classList.add('text-primary', 'opacity-70', 'hover:bg-surface-container-highest');
+      }
+    });
+  }
+
+  function renderPublicChrome() {
+    if (window.location.pathname.startsWith('/admin')) return;
+    const header = document.querySelector('header');
+    const footer = document.querySelector('footer');
+    if (!header || !footer) return;
+
+    const pathNow = window.location.pathname;
+    const navItems = [
+      { href: '/', label: 'Home' },
+      { href: '/programs', label: 'Programs' },
+      { href: '/announcements', label: 'Announcements' },
+      { href: '/gallery', label: 'Gallery' },
+      { href: '/contact', label: 'Contact' }
+    ];
+    const isActive = (href) => href !== '/' ? pathNow.startsWith(href) : pathNow === '/';
+
+    header.className = 'bg-[#fbf9f5] sticky top-0 z-50 border-b border-outline-variant/20';
+    header.innerHTML = `
+      <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+        <a href="/" class="font-headline text-xl font-black text-primary">The Sacred Hearth</a>
+        <div class="hidden md:flex items-center gap-8 font-headline text-base font-medium">
+          ${navItems.map(i => `
+            <a href="${i.href}" class="${isActive(i.href) ? 'text-secondary border-b-2 border-secondary pb-1' : 'text-primary/80 hover:text-secondary transition-colors'}">${i.label}</a>
+          `).join('')}
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="/admin/login" class="hidden sm:inline-flex bg-primary text-on-primary px-5 py-2.5 rounded-full font-semibold hover:opacity-90 transition-opacity">Login</a>
+          <button type="button" id="mobile-menu-btn" class="md:hidden p-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-colors text-primary">
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+        </div>
+      </nav>
+      <div id="mobile-menu" class="md:hidden hidden border-t border-outline-variant/20 bg-[#fbf9f5]">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-3">
+          ${navItems.map(i => `
+            <a href="${i.href}" class="px-4 py-3 rounded-xl font-semibold ${isActive(i.href) ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-primary hover:bg-surface-container-high'}">${i.label}</a>
+          `).join('')}
+          <a href="/admin/login" class="px-4 py-3 rounded-xl font-bold bg-secondary-container text-on-secondary-container">Admin Login</a>
+        </div>
+      </div>
+    `;
+
+    footer.className = 'bg-primary py-14 mt-20';
+    footer.innerHTML = `
+      <div class="max-w-7xl mx-auto px-6 flex flex-col items-center gap-7 text-center">
+        <div class="font-headline text-white text-2xl font-black">The Sacred Hearth</div>
+        <div class="flex flex-wrap justify-center gap-8 text-on-primary/70 text-sm font-semibold">
+          <a class="hover:text-white transition-opacity" href="/privacy">Privacy</a>
+          <a class="hover:text-white transition-opacity" href="/terms">Terms</a>
+          <a class="hover:text-white transition-opacity" href="/give">Give</a>
+          <a class="hover:text-white transition-opacity" href="/contact">Contact</a>
+        </div>
+        <div class="w-full max-w-lg h-px bg-primary-container"></div>
+        <div class="text-on-primary/40 text-sm font-semibold">© 2026 The Sacred Hearth Okitipupa. All Rights Reserved.</div>
+      </div>
+    `;
+
+    const btn = document.getElementById('mobile-menu-btn');
+    const menu = document.getElementById('mobile-menu');
+    btn?.addEventListener('click', () => {
+      menu?.classList.toggle('hidden');
+    });
+  }
+
   // API request wrapper
   async function apiRequest(endpoint, options = {}) {
     const parseAs = options.parseAs || 'json'; // 'json' | 'text' | 'blob'
@@ -1580,10 +1719,213 @@
   
   async function initProgramsAdmin() {
     if (!requireAuth()) return;
-    
-    // Similar pattern: load programs, render table, handle modal for create/edit
-    // Implementation would follow same structure as members/finance
-    console.log('Programs admin initialized');
+
+    let currentPage = 1;
+    let currentCategory = 'all';
+    let currentSearch = '';
+
+    const tableBody = document.getElementById('programs-table-body');
+    const searchInput = document.getElementById('program-search');
+    const paginationInfo = document.getElementById('pagination-info');
+    const paginationControls = document.getElementById('pagination-controls');
+    const filterBtns = document.querySelectorAll('#category-filters .filter-btn');
+
+    const modal = document.getElementById('program-modal');
+    const form = document.getElementById('program-form');
+
+    function open() {
+      modal?.classList.remove('hidden');
+    }
+    function close() {
+      modal?.classList.add('hidden');
+      form?.reset();
+      document.getElementById('program-id') && (document.getElementById('program-id').value = '');
+    }
+
+    async function loadStats() {
+      try {
+        const stats = await apiRequest('/admin/programs/stats');
+        const active = (Number(stats.upcoming || 0) + Number(stats.ongoing || 0)) || Number(stats.total || 0) || 0;
+        const el = document.getElementById('active-programs-count');
+        if (el) el.textContent = active;
+      } catch (_) {}
+    }
+
+    async function loadPrograms(page = 1) {
+      currentPage = page;
+      const q = new URLSearchParams({
+        page: String(page),
+        limit: '10',
+        search: currentSearch,
+        category: currentCategory
+      });
+      try {
+        const data = await apiRequest(`/admin/programs?${q.toString()}`);
+        renderPrograms(data.items || []);
+        if (paginationInfo) paginationInfo.textContent = `Showing ${data.from} to ${data.to} of ${data.total} programs`;
+        renderPaginationControls(paginationControls, data.page, data.totalPages, (p) => loadPrograms(p));
+        await loadStats();
+      } catch (error) {
+        console.error('Failed to load programs:', error);
+        showToast(error.message, 'error');
+      }
+    }
+
+    function renderPrograms(items) {
+      if (!tableBody) return;
+      tableBody.innerHTML = items.map(p => {
+        const start = p.start_datetime ? new Date(p.start_datetime) : null;
+        const schedule = start ? `${formatDate(start.toISOString())} • ${formatTime(start.toISOString())}` : '—';
+        const statusColor =
+          p.status === 'upcoming' ? 'bg-secondary-container text-on-secondary-container' :
+          p.status === 'ongoing' ? 'bg-primary-fixed text-on-primary-fixed-variant' :
+          p.status === 'completed' ? 'bg-surface-container-highest text-on-surface-variant' :
+          'bg-error-container text-on-error-container';
+
+        return `
+          <tr class="hover:bg-surface-container-low transition-colors">
+            <td class="px-6 py-5">
+              <div class="flex flex-col">
+                <span class="text-sm font-black text-primary">${p.title}</span>
+                <span class="text-xs text-on-surface-variant">${p.location || '—'} • ${p.category || '—'}</span>
+              </div>
+            </td>
+            <td class="px-6 py-5 text-sm font-bold text-primary">${(p.type || 'service').replaceAll('_', ' ')}</td>
+            <td class="px-6 py-5 text-sm font-medium text-on-surface-variant">${schedule}</td>
+            <td class="px-6 py-5">
+              <span class="${statusColor} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${p.status || 'draft'}</span>
+            </td>
+            <td class="px-6 py-5 text-right">
+              <div class="flex justify-end gap-2">
+                <button data-action="edit" data-id="${p.id}" class="p-2 rounded-lg bg-surface-container-highest hover:bg-surface-container-high transition-colors text-primary">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button data-action="delete" data-id="${p.id}" class="p-2 rounded-lg bg-error-container/30 hover:bg-error-container transition-colors text-error">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tableBody.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          try {
+            const program = await apiRequest(`/admin/programs/${id}`);
+            document.getElementById('program-id').value = program.id;
+            document.getElementById('program-title').value = program.title || '';
+            document.getElementById('program-type').value = program.type || 'service';
+            document.getElementById('program-category').value = program.category || 'Liturgical';
+            document.getElementById('program-location').value = program.location || '';
+            document.getElementById('program-description').value = program.description || '';
+            document.getElementById('program-status').value = program.status || 'upcoming';
+            document.getElementById('program-main-service').checked = Boolean(program.is_main_service);
+            document.getElementById('program-featured').checked = Boolean(program.is_featured);
+
+            if (program.start_datetime) {
+              const dt = new Date(program.start_datetime);
+              const yyyy = dt.getFullYear();
+              const mm = String(dt.getMonth() + 1).padStart(2, '0');
+              const dd = String(dt.getDate()).padStart(2, '0');
+              const hh = String(dt.getHours()).padStart(2, '0');
+              const mi = String(dt.getMinutes()).padStart(2, '0');
+              document.getElementById('program-date').value = `${yyyy}-${mm}-${dd}`;
+              document.getElementById('program-time').value = `${hh}:${mi}`;
+            }
+            open();
+          } catch (e) {
+            showToast(e.message, 'error');
+          }
+        });
+      });
+
+      tableBody.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          if (!confirm('Delete this program?')) return;
+          try {
+            await apiRequest(`/admin/programs/${id}`, { method: 'DELETE' });
+            showToast('Program deleted', 'success');
+            await loadPrograms(currentPage);
+          } catch (e) {
+            showToast(e.message, 'error');
+          }
+        });
+      });
+    }
+
+    // Modal open buttons
+    document.getElementById('new-program-sidebar-btn')?.addEventListener('click', open);
+    document.getElementById('add-program-header-btn')?.addEventListener('click', open);
+    document.getElementById('close-modal-btn')?.addEventListener('click', close);
+    document.getElementById('cancel-modal-btn')?.addEventListener('click', close);
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) close();
+    });
+
+    // Filters
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        filterBtns.forEach(b => b.classList.add('opacity-40'));
+        btn.classList.remove('opacity-40');
+        currentCategory = btn.dataset.category || 'all';
+        await loadPrograms(1);
+      });
+    });
+
+    if (searchInput) {
+      let t;
+      searchInput.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          currentSearch = searchInput.value || '';
+          loadPrograms(1);
+        }, 400);
+      });
+    }
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const id = (fd.get('id') || '').toString();
+      const date = (fd.get('date') || '').toString();
+      const time = (fd.get('time') || '').toString();
+      const start_datetime = date && time ? `${date} ${time}:00` : null;
+      const payload = {
+        title: (fd.get('title') || '').toString(),
+        description: (fd.get('description') || '').toString(),
+        type: (fd.get('type') || 'service').toString(),
+        category: (fd.get('category') || '').toString(),
+        location: (fd.get('location') || '').toString(),
+        status: (fd.get('status') || 'upcoming').toString(),
+        start_datetime,
+        schedule: time || null,
+        is_main_service: fd.get('is_main_service') === 'on',
+        is_featured: fd.get('is_featured') === 'on'
+      };
+      if (!payload.title || !payload.start_datetime) {
+        showToast('Title and start date/time are required', 'error');
+        return;
+      }
+
+      try {
+        if (id) {
+          await apiRequest(`/admin/programs/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+          showToast('Program updated', 'success');
+        } else {
+          await apiRequest('/admin/programs', { method: 'POST', body: JSON.stringify(payload) });
+          showToast('Program created', 'success');
+        }
+        close();
+        await loadPrograms(1);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    await loadPrograms(1);
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
 
@@ -1591,7 +1933,227 @@
   
   async function initAnnouncementsAdmin() {
     if (!requireAuth()) return;
-    console.log('Announcements admin initialized');
+
+    let currentPage = 1;
+    let currentSearch = '';
+
+    const tableBody = document.getElementById('announcements-table-body');
+    const searchInput = document.getElementById('announcement-search');
+    const paginationInfo = document.getElementById('pagination-info');
+    const paginationControls = document.getElementById('pagination-controls');
+
+    const modal = document.getElementById('announcement-modal');
+    const form = document.getElementById('announcement-form');
+    const closeBtn = document.getElementById('close-modal-btn');
+
+    const priorityBtns = document.querySelectorAll('#priority-selector .priority-btn');
+    const priorityInput = document.getElementById('announcement-priority');
+
+    let submitMode = 'publish'; // 'publish' | 'draft'
+
+    function open() {
+      modal?.classList.remove('hidden');
+    }
+    function close() {
+      modal?.classList.add('hidden');
+      form?.reset();
+      document.getElementById('announcement-id') && (document.getElementById('announcement-id').value = '');
+      document.getElementById('announcement-priority') && (document.getElementById('announcement-priority').value = 'normal');
+      document.getElementById('announcement-status') && (document.getElementById('announcement-status').value = 'draft');
+      submitMode = 'publish';
+    }
+
+    function setPriority(v) {
+      if (priorityInput) priorityInput.value = v;
+      priorityBtns.forEach(b => {
+        if (b.dataset.priority === v) {
+          b.classList.add('bg-surface', 'text-primary', 'shadow-sm');
+          b.classList.remove('text-on-surface-variant');
+        } else {
+          b.classList.remove('bg-surface', 'text-primary', 'shadow-sm');
+          b.classList.add('text-on-surface-variant');
+        }
+      });
+    }
+
+    priorityBtns.forEach(btn => btn.addEventListener('click', () => setPriority(btn.dataset.priority || 'normal')));
+
+    async function loadStats() {
+      try {
+        const s = await apiRequest('/admin/announcements/stats');
+        document.getElementById('active-announcements-count') && (document.getElementById('active-announcements-count').textContent = s.published || 0);
+        document.getElementById('draft-announcements-count') && (document.getElementById('draft-announcements-count').textContent = s.draft || 0);
+        document.getElementById('scheduled-announcements-count') && (document.getElementById('scheduled-announcements-count').textContent = s.scheduled || 0);
+        document.getElementById('total-reach-count') && (document.getElementById('total-reach-count').textContent = s.totalReach || 0);
+      } catch (_) {}
+    }
+
+    async function loadAnnouncements(page = 1) {
+      currentPage = page;
+      const q = new URLSearchParams({ page: String(page), limit: '10', search: currentSearch });
+      try {
+        const data = await apiRequest(`/admin/announcements?${q.toString()}`);
+        renderAnnouncements(data.items || []);
+        if (paginationInfo) paginationInfo.textContent = `Showing ${data.from} to ${data.to} of ${data.total} announcements`;
+        renderPaginationControls(paginationControls, data.page, data.totalPages, (p) => loadAnnouncements(p));
+        await loadStats();
+      } catch (e) {
+        console.error('Failed to load announcements:', e);
+        showToast(e.message, 'error');
+      }
+    }
+
+    function renderAnnouncements(items) {
+      if (!tableBody) return;
+      tableBody.innerHTML = items.map(a => {
+        const date = a.created_at ? formatDate(a.created_at) : '';
+        const statusColor =
+          a.status === 'published' ? 'bg-primary-fixed text-on-primary-fixed-variant' :
+          a.status === 'draft' ? 'bg-surface-container-highest text-on-surface-variant' :
+          a.status === 'scheduled' ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant' :
+          'bg-error-container text-on-error-container';
+        return `
+          <tr class="hover:bg-surface-container-low transition-colors">
+            <td class="px-6 py-5">
+              <div class="flex flex-col gap-1">
+                <span class="text-sm font-black text-primary">${a.title}</span>
+                <span class="text-xs text-on-surface-variant">${(a.summary || '').substring(0, 90)}${a.summary && a.summary.length > 90 ? '…' : ''}</span>
+              </div>
+            </td>
+            <td class="px-6 py-5 text-sm font-bold text-primary">${a.category || 'General'}</td>
+            <td class="px-6 py-5"><span class="${statusColor} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${a.status}</span></td>
+            <td class="px-6 py-5 text-sm font-medium text-on-surface-variant">${date}</td>
+            <td class="px-6 py-5 text-right">
+              <div class="flex justify-end gap-2">
+                <button data-action="edit" data-id="${a.id}" class="p-2 rounded-lg bg-surface-container-highest hover:bg-surface-container-high transition-colors text-primary">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button data-action="delete" data-id="${a.id}" class="p-2 rounded-lg bg-error-container/30 hover:bg-error-container transition-colors text-error">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tableBody.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          try {
+            const a = await apiRequest(`/admin/announcements/${id}`);
+            document.getElementById('announcement-id').value = a.id;
+            document.getElementById('announcement-title').value = a.title || '';
+            document.getElementById('announcement-summary').value = a.summary || '';
+            document.getElementById('announcement-content').value = a.content || '';
+            document.getElementById('announcement-category').value = a.category || 'Admin';
+            document.getElementById('announcement-image-url').value = a.image_url || '';
+            document.getElementById('announcement-status').value = a.status || 'draft';
+            if (a.scheduled_for) {
+              const dt = new Date(a.scheduled_for);
+              const yyyy = dt.getFullYear();
+              const mm = String(dt.getMonth() + 1).padStart(2, '0');
+              const dd = String(dt.getDate()).padStart(2, '0');
+              const hh = String(dt.getHours()).padStart(2, '0');
+              const mi = String(dt.getMinutes()).padStart(2, '0');
+              document.getElementById('announcement-scheduled-for').value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+            } else {
+              document.getElementById('announcement-scheduled-for').value = '';
+            }
+            setPriority(a.priority || 'normal');
+            open();
+          } catch (e) {
+            showToast(e.message, 'error');
+          }
+        });
+      });
+
+      tableBody.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          if (!confirm('Delete this announcement?')) return;
+          try {
+            await apiRequest(`/admin/announcements/${id}`, { method: 'DELETE' });
+            showToast('Announcement deleted', 'success');
+            await loadAnnouncements(currentPage);
+          } catch (e) {
+            showToast(e.message, 'error');
+          }
+        });
+      });
+    }
+
+    document.getElementById('create-announcement-header-btn')?.addEventListener('click', open);
+    document.getElementById('new-announcement-sidebar-btn')?.addEventListener('click', open);
+    document.getElementById('fab-create-announcement')?.addEventListener('click', open);
+    closeBtn?.addEventListener('click', close);
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) close();
+    });
+
+    document.getElementById('save-draft-btn')?.addEventListener('click', () => {
+      submitMode = 'draft';
+      form?.requestSubmit();
+    });
+
+    if (searchInput) {
+      let t;
+      searchInput.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          currentSearch = searchInput.value || '';
+          loadAnnouncements(1);
+        }, 400);
+      });
+    }
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const id = (fd.get('id') || '').toString();
+
+      const statusFromSelect = (document.getElementById('announcement-status')?.value || 'draft').toString();
+      const status = submitMode === 'draft' ? 'draft' : (statusFromSelect === 'scheduled' ? 'scheduled' : 'published');
+
+      const scheduledFor = (fd.get('scheduled_for') || '').toString();
+      if (status === 'scheduled' && !scheduledFor) {
+        showToast('Please set a schedule date/time', 'error');
+        return;
+      }
+
+      const payload = {
+        title: (fd.get('title') || '').toString(),
+        summary: (fd.get('summary') || '').toString(),
+        content: (fd.get('content') || '').toString(),
+        category: (fd.get('category') || 'General').toString(),
+        image_url: (fd.get('image_url') || '').toString() || null,
+        priority: (fd.get('priority') || 'normal').toString(),
+        status,
+        scheduled_for: status === 'scheduled' ? scheduledFor.replace('T', ' ') + ':00' : null
+      };
+
+      if (!payload.title || !payload.content) {
+        showToast('Headline and body are required', 'error');
+        return;
+      }
+
+      try {
+        if (id) {
+          await apiRequest(`/admin/announcements/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+          showToast('Announcement updated', 'success');
+        } else {
+          await apiRequest('/admin/announcements', { method: 'POST', body: JSON.stringify(payload) });
+          showToast('Announcement created', 'success');
+        }
+        submitMode = 'publish';
+        close();
+        await loadAnnouncements(1);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    await loadAnnouncements(1);
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
 
@@ -1599,7 +2161,214 @@
   
   async function initGalleryAdmin() {
     if (!requireAuth()) return;
-    console.log('Gallery admin initialized');
+
+    let currentPage = 1;
+    let currentSearch = '';
+
+    const grid = document.getElementById('gallery-grid');
+    const searchInput = document.getElementById('gallery-search');
+    const paginationInfo = document.getElementById('gallery-pagination-info');
+    const paginationControls = document.getElementById('gallery-pagination-controls');
+
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const uploadBtn = document.getElementById('upload-images-btn');
+    const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+
+    const editModal = document.getElementById('edit-image-modal');
+    const editForm = document.getElementById('edit-image-form');
+
+    function openEdit() {
+      editModal?.classList.remove('hidden');
+    }
+    function closeEdit() {
+      editModal?.classList.add('hidden');
+      editForm?.reset();
+      document.getElementById('edit-image-id') && (document.getElementById('edit-image-id').value = '');
+    }
+
+    async function loadStats() {
+      try {
+        const s = await apiRequest('/admin/gallery/stats');
+        const bytes = Number(s.storageBytes || 0);
+        const mb = (bytes / (1024 * 1024));
+        const total = Number(s.totalImages || 0);
+        document.getElementById('storage-usage-text') && (document.getElementById('storage-usage-text').textContent = `${mb.toFixed(1)} MB used • ${total} images`);
+        const limitMb = 500;
+        const pct = Math.min(100, Math.round((mb / limitMb) * 100));
+        document.getElementById('storage-progress-bar') && (document.getElementById('storage-progress-bar').style.width = `${pct}%`);
+      } catch (_) {}
+    }
+
+    async function loadGallery(page = 1) {
+      currentPage = page;
+      const q = new URLSearchParams({ page: String(page), limit: '12', search: currentSearch });
+      try {
+        const data = await apiRequest(`/admin/gallery?${q.toString()}`);
+        renderGallery(data.items || []);
+        if (paginationInfo) paginationInfo.textContent = `Showing ${data.from} to ${data.to} of ${data.total} images`;
+        renderPaginationControls(paginationControls, data.page, data.totalPages, (p) => loadGallery(p));
+        await loadStats();
+      } catch (e) {
+        console.error('Failed to load gallery:', e);
+        showToast(e.message, 'error');
+      }
+    }
+
+    function renderGallery(items) {
+      if (!grid) return;
+      grid.innerHTML = items.map(img => `
+        <div class="bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/20">
+          <div class="relative aspect-square bg-surface-container-low">
+            <img src="${img.url}" alt="${img.caption || 'Gallery image'}" class="w-full h-full object-cover"/>
+            <div class="absolute top-3 left-3">
+              <input type="checkbox" class="w-4 h-4 accent-primary" data-select-id="${img.id}"/>
+            </div>
+            <div class="absolute top-3 right-3 flex gap-2">
+              <button class="p-2 rounded-lg bg-white/90 hover:bg-white text-primary" data-action="edit" data-id="${img.id}">
+                <span class="material-symbols-outlined text-base">edit</span>
+              </button>
+              <button class="p-2 rounded-lg bg-white/90 hover:bg-white text-error" data-action="delete" data-id="${img.id}">
+                <span class="material-symbols-outlined text-base">delete</span>
+              </button>
+            </div>
+          </div>
+          <div class="p-4 space-y-1">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-black text-primary truncate">${img.caption || 'Untitled'}</p>
+              ${img.is_featured ? '<span class="text-[10px] font-black bg-secondary-container text-on-secondary-container px-2 py-1 rounded-full">FEATURED</span>' : ''}
+            </div>
+            <p class="text-xs text-on-surface-variant truncate">${img.category || '—'}</p>
+          </div>
+        </div>
+      `).join('');
+
+      grid.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          if (!confirm('Delete this image?')) return;
+          try {
+            await apiRequest(`/admin/gallery/${id}`, { method: 'DELETE' });
+            showToast('Image deleted', 'success');
+            await loadGallery(currentPage);
+          } catch (e) {
+            showToast(e.message, 'error');
+          }
+        });
+      });
+
+      grid.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          try {
+            const img = await apiRequest(`/admin/gallery/${id}`);
+            document.getElementById('edit-image-id').value = img.id;
+            document.getElementById('edit-caption').value = img.caption || '';
+            document.getElementById('edit-description').value = img.description || '';
+            document.getElementById('edit-category').value = img.category || '';
+            document.getElementById('edit-display-order').value = img.display_order || 0;
+            document.getElementById('edit-featured').checked = Boolean(img.is_featured);
+            openEdit();
+          } catch (e) {
+            showToast(e.message, 'error');
+          }
+        });
+      });
+    }
+
+    async function uploadFiles(files) {
+      if (!files || files.length === 0) return;
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('image', file);
+        fd.append('caption', file.name.replace(/\.[^/.]+$/, '').replaceAll('_', ' '));
+        try {
+          await apiRequest('/admin/gallery', { method: 'POST', body: fd });
+        } catch (e) {
+          showToast(`Upload failed: ${file.name}`, 'error');
+        }
+      }
+      showToast('Upload complete', 'success');
+      await loadGallery(1);
+    }
+
+    uploadBtn?.addEventListener('click', () => fileInput?.click());
+    dropZone?.addEventListener('click', () => fileInput?.click());
+    fileInput?.addEventListener('change', async () => {
+      const files = Array.from(fileInput.files || []);
+      await uploadFiles(files);
+      fileInput.value = '';
+    });
+
+    dropZone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('bg-surface-container-high');
+    });
+    dropZone?.addEventListener('dragleave', () => {
+      dropZone.classList.remove('bg-surface-container-high');
+    });
+    dropZone?.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('bg-surface-container-high');
+      const files = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'));
+      await uploadFiles(files);
+    });
+
+    bulkDeleteBtn?.addEventListener('click', async () => {
+      const selected = Array.from(document.querySelectorAll('input[data-select-id]:checked')).map(i => i.getAttribute('data-select-id'));
+      if (selected.length === 0) {
+        showToast('Select images first', 'info');
+        return;
+      }
+      if (!confirm(`Delete ${selected.length} images?`)) return;
+      for (const id of selected) {
+        try {
+          await apiRequest(`/admin/gallery/${id}`, { method: 'DELETE' });
+        } catch (_) {}
+      }
+      showToast('Bulk delete complete', 'success');
+      await loadGallery(currentPage);
+    });
+
+    document.getElementById('close-edit-modal-btn')?.addEventListener('click', closeEdit);
+    document.getElementById('cancel-edit-btn')?.addEventListener('click', closeEdit);
+    editModal?.addEventListener('click', (e) => {
+      if (e.target === editModal) closeEdit();
+    });
+
+    editForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(editForm);
+      const id = (fd.get('id') || '').toString();
+      const payload = {
+        caption: (fd.get('caption') || '').toString(),
+        description: (fd.get('description') || '').toString(),
+        category: (fd.get('category') || '').toString(),
+        display_order: Number(fd.get('display_order') || 0),
+        is_featured: fd.get('featured') === 'on'
+      };
+      try {
+        await apiRequest(`/admin/gallery/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        showToast('Image updated', 'success');
+        closeEdit();
+        await loadGallery(currentPage);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+
+    if (searchInput) {
+      let t;
+      searchInput.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          currentSearch = searchInput.value || '';
+          loadGallery(1);
+        }, 400);
+      });
+    }
+
+    await loadGallery(1);
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
 
@@ -1679,6 +2448,8 @@
   // ==================== INITIALIZATION ====================
   
   document.addEventListener('DOMContentLoaded', () => {
+    normalizeAdminSidebar();
+    renderPublicChrome();
     // Public pages
     if (pageDetector.isHome) initHome();
     else if (pageDetector.isPrograms) initProgramsPublic();

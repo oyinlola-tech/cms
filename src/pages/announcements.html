@@ -305,6 +305,10 @@
           <input id="announcement-title" name="title" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium transition-colors" placeholder="Enter announcement title" type="text" required/>
         </div>
         <div>
+          <label class="block text-sm font-bold text-primary mb-2">Summary (short excerpt)</label>
+          <input id="announcement-summary" name="summary" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium transition-colors" placeholder="Short summary for the public list page" type="text"/>
+        </div>
+        <div>
           <label class="block text-sm font-bold text-primary mb-2">Announcement Body</label>
           <textarea id="announcement-content" name="content" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium transition-colors resize-none" placeholder="Describe the announcement in detail..." rows="6" required></textarea>
         </div>
@@ -327,6 +331,25 @@
             </div>
             <input type="hidden" id="announcement-priority" name="priority" value="normal"/>
           </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-primary mb-2">Status</label>
+            <select id="announcement-status" name="status" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium">
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-primary mb-2">Schedule For (optional)</label>
+            <input id="announcement-scheduled-for" name="scheduled_for" type="datetime-local" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-primary mb-2">Image URL (optional)</label>
+          <input id="announcement-image-url" name="image_url" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium transition-colors" placeholder="/uploads/..." type="text"/>
         </div>
         <div class="mt-12 flex justify-end gap-4">
           <button type="button" id="save-draft-btn" class="px-6 py-3 rounded-xl font-bold text-primary hover:bg-surface-container transition-colors">Save as Draft</button>

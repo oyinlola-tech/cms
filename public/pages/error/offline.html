@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Offline - The Sacred Hearth</title>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "on-surface-variant": "#414844",
+            "outline-variant": "#c1c8c2",
+            "inverse-on-surface": "#f2f0ed",
+            "tertiary": "#540012",
+            "surface-container-low": "#f5f3ef",
+            "surface-tint": "#2c694e",
+            "background": "#fbf9f5",
+            "surface-container": "#efeeea",
+            "surface-variant": "#e4e2de",
+            "secondary-fixed-dim": "#e9c349",
+            "on-secondary-fixed-variant": "#574500",
+            "on-secondary-fixed": "#241a00",
+            "surface-container-high": "#eae8e4",
+            "on-primary": "#ffffff",
+            "surface-dim": "#dbdad6",
+            "surface-bright": "#fbf9f5",
+            "on-primary-fixed": "#002114",
+            "on-error": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-container": "#7d001f",
+            "on-primary-fixed-variant": "#0e5138",
+            "inverse-surface": "#30312e",
+            "outline": "#717973",
+            "on-primary-container": "#76b394",
+            "on-secondary": "#ffffff",
+            "on-surface": "#1b1c1a",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface": "#fbf9f5",
+            "on-error-container": "#93000a",
+            "secondary-container": "#fed65b",
+            "primary-container": "#00452e",
+            "tertiary-fixed": "#ffdada",
+            "primary-fixed-dim": "#95d4b3",
+            "surface-container-highest": "#e4e2de",
+            "surface-container-lowest": "#ffffff",
+            "primary": "#002d1c",
+            "on-tertiary-fixed": "#40000b",
+            "on-secondary-container": "#745c00",
+            "inverse-primary": "#95d4b3",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-tertiary-container": "#ff7f87",
+            "error-container": "#ffdad6",
+            "primary-fixed": "#b1f0ce",
+            "error": "#ba1a1a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .glass-effect {
+      background: rgba(44, 105, 78, 0.1);
+      backdrop-filter: blur(12px);
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+
+<body class="bg-background font-body text-on-surface selection:bg-secondary-container">
+
+<div class="min-h-screen flex flex-col">
+  
+  <!-- Top Navigation Bar (matching platform) -->
+  <header class="bg-[#fbf9f5] dark:bg-[#002d1c] docked full-width top-0 sticky z-50 border-b border-outline-variant/10">
+    <div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+      <div class="text-2xl font-bold text-[#002d1c] dark:text-[#fbf9f5] font-headline">
+        The Sacred Hearth
+      </div>
+      <nav class="hidden md:flex items-center gap-8 font-headline text-lg font-medium">
+        <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/">Home</a>
+        <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/programs">Programs</a>
+        <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/announcements">Announcements</a>
+        <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/gallery">Gallery</a>
+        <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/contact">Contact</a>
+      </nav>
+      <div class="flex items-center gap-4">
+        <a href="/admin/login" class="px-6 py-2 rounded-full font-bold bg-primary text-on-primary hover:opacity-90 transition-all">
+          Login
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow flex items-center justify-center p-6 sm:p-12 relative overflow-hidden">
+    <!-- Background Blurs -->
+    <div class="absolute inset-0 pointer-events-none opacity-20">
+      <div class="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] bg-primary rounded-full blur-[120px]"></div>
+      <div class="absolute bottom-[-10%] left-[-5%] w-[300px] h-[300px] bg-secondary rounded-full blur-[100px]"></div>
+    </div>
+
+    <div class="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+      
+      <!-- Left Content -->
+      <div class="space-y-8 text-center lg:text-left">
+        <div class="inline-flex items-center gap-2 px-4 py-2 bg-surface-container-low rounded-full border border-outline-variant/20">
+          <span class="material-symbols-outlined text-secondary text-sm">signal_wifi_off</span>
+          <span class="text-xs font-bold tracking-widest uppercase text-on-surface-variant font-label">Connection Interrupted</span>
+        </div>
+        <div class="space-y-4">
+          <h1 class="font-headline text-4xl md:text-6xl font-bold leading-tight text-primary">
+            Connected in Spirit, but Offline in Data.
+          </h1>
+          <p class="text-lg md:text-xl text-on-surface-variant max-w-lg mx-auto lg:mx-0 font-body">
+            The digital path to Okitipupa is currently experiencing a quiet moment. Your devotion is recorded locally, but we need a heartbeat from the network to sync.
+          </p>
+        </div>
+        <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+          <button onclick="window.location.reload()" class="group relative px-8 py-4 bg-primary text-on-primary rounded-xl font-semibold overflow-hidden transition-all active:scale-95 shadow-lg shadow-primary/10">
+            <div class="absolute inset-0 bg-gradient-to-r from-primary to-primary-container opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <span class="relative flex items-center gap-2">
+              <span class="material-symbols-outlined">refresh</span>
+              Try Again
+            </span>
+          </button>
+          <a href="/admin/settings" class="px-8 py-4 border-2 border-outline-variant/30 text-primary rounded-xl font-semibold hover:bg-surface-container-low transition-colors active:scale-95">
+            Check Settings
+          </a>
+        </div>
+        <div class="pt-8 border-t border-outline-variant/20">
+          <p class="text-sm font-medium text-on-surface-variant italic">
+            "Wait for the Lord; be strong and take heart." — Psalm 27:14
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Visual -->
+      <div class="relative flex justify-center items-center">
+        <div class="w-full aspect-square max-w-md relative">
+          <div class="absolute inset-0 bg-surface-container-low rounded-xl transform rotate-3 scale-105 opacity-50"></div>
+          <div class="absolute inset-0 bg-surface-container-high rounded-xl transform -rotate-3 scale-105 opacity-50"></div>
+          <div class="relative w-full h-full rounded-xl overflow-hidden shadow-2xl">
+            <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmD066742QF-nfFlYPH51HvMXYFvH_TscOcOvynWWmCjoH3DiPg6_d0MjSaKZPrLdeAuUofIyU3uwCmtLxzZnBiTAGaSwtG8cogKh_ladyzdBM0h-aleBHc3I4Yh3Afwupaka9YBHblR828PEl0c_YpFVQ2JUB0v29EMxUtnDH2LDz0GxXzbnwzwsN2r27nQ_IMobT9d2-92IzkOjdAStLpHIm8xPdO-_2wGDsXiHGg_vrriQVIfBeaJns_U2v2CZMYmSMI1S3iHA" alt="Okitipupa landscape">
+            <div class="absolute inset-0 glass-effect flex items-center justify-center flex-col p-8 text-center">
+              <div class="w-24 h-24 bg-surface-container-lowest rounded-full flex items-center justify-center mb-6 shadow-xl">
+                <span class="material-symbols-outlined text-primary text-5xl">wifi_off</span>
+              </div>
+              <h3 class="font-headline text-2xl font-bold text-on-primary-fixed mb-2">Still Searching...</h3>
+              <div class="flex gap-1">
+                <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                <div class="w-2 h-2 rounded-full bg-primary/60 animate-pulse delay-75"></div>
+                <div class="w-2 h-2 rounded-full bg-primary/30 animate-pulse delay-150"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Quick Tip Card -->
+        <div class="absolute -bottom-6 -right-6 p-6 bg-secondary-container text-on-secondary-container rounded-xl shadow-xl max-w-[200px] hidden sm:block">
+          <span class="text-xs font-bold uppercase tracking-widest block mb-1 font-label">Quick Tip</span>
+          <p class="text-sm font-medium">Try toggling Airplane Mode to refresh your connection to the local tower.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer (matching platform) -->
+  <footer class="bg-[#002d1c] dark:bg-[#001a10] w-full py-12 border-t border-[#00452e]">
+    <div class="flex flex-col items-center gap-8 px-4 text-center max-w-7xl mx-auto">
+      <div class="font-headline text-white text-3xl font-black">
+        The Sacred Hearth
+      </div>
+      <div class="flex flex-wrap justify-center gap-8 font-body text-sm">
+        <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/privacy">Privacy Policy</a>
+        <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/terms">Terms of Service</a>
+        <a class="text-[#735c00] underline hover:opacity-100 transition-opacity" href="/give">Give Online</a>
+        <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/contact">Contact Support</a>
+      </div>
+      <div class="space-y-4 max-w-md">
+        <p class="text-[#fbf9f5] opacity-80 text-sm leading-relaxed">
+          Connecting the people of Okitipupa through faith, charity, and community service. 
+          Visit us at 12 Cathedral Way, Okitipupa, Ondo State.
+        </p>
+      </div>
+      <div class="pt-8 border-t border-[#00452e] w-full text-[#fbf9f5] opacity-40 text-xs">
+        © 2026 The Sacred Hearth Okitipupa. All Rights Reserved.
+      </div>
+    </div>
+  </footer>
+</div>
+
+</body>
+</html>

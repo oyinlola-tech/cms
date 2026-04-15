@@ -20,6 +20,54 @@ It contains:
 - `js/app.js` – Shared frontend logic (public + admin)
 - `uploads/` – Uploaded images (created automatically at runtime)
 
+### Folder/Files Tree (key files)
+
+```
+.env
+.env.example
+.gitignore
+db-init.js
+js/app.js
+package.json
+package-lock.json
+server.js
+README.md
+SECURITY.md
+
+public/
+  index.html
+  images/
+    default-avatar.svg
+    placeholder.svg
+  pages/
+    announcements.html
+    announcement-details.html
+    programs.html
+    gallery.html
+    contact.html
+    privacy.html
+    terms.html
+    give.html
+
+src/
+  index.html
+  auth/
+    login.html
+    forgot-password.html
+    verify-otp.html
+    reset-password.html
+  pages/
+    members.html
+    finance.html
+    programs.html
+    announcements.html
+    gallery.html
+    reports.html
+    settings.html
+    details/
+      members-details.html
+```
+
 ## Features (Current)
 ### Public Website
 - Announcements (list + details)
@@ -32,6 +80,9 @@ It contains:
 - Dashboard stats + recent activity + upcoming program
 - Members: list, search, create, edit, delete, view details
 - Finance: summary, paginated transactions, create transaction, export CSV
+- Programs: full CRUD (create/edit/delete, search, pagination)
+- Announcements: full CRUD (draft/publish/schedule/archive, search, pagination)
+- Gallery: upload, edit metadata, delete, bulk delete, search, pagination
 
 ## Requirements
 - Node.js 18+ recommended
@@ -131,4 +182,3 @@ Admin (requires `Authorization: Bearer <token>`):
 
 ## License
 ISC (see `package.json`).
-

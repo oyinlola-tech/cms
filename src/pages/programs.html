@@ -257,10 +257,23 @@
     </div>
     
     <form id="program-form" class="p-8 space-y-6">
+      <input type="hidden" id="program-id" name="id"/>
       <div class="grid grid-cols-2 gap-6">
         <div class="col-span-2">
           <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Program Title</label>
           <input id="program-title" name="title" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all" placeholder="e.g. Easter Youth Retreat" type="text" required/>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Type</label>
+          <select id="program-type" name="type" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all appearance-none">
+            <option value="service">Service</option>
+            <option value="devotion">Devotion</option>
+            <option value="fellowship">Fellowship</option>
+            <option value="bible_study">Bible Study</option>
+            <option value="outreach">Outreach</option>
+            <option value="youth">Youth</option>
+            <option value="other">Other</option>
+          </select>
         </div>
         <div>
           <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Category</label>
@@ -283,9 +296,28 @@
           <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Start Time</label>
           <input id="program-time" name="time" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all" type="time" required/>
         </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Status</label>
+          <select id="program-status" name="status" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all appearance-none">
+            <option value="upcoming">Upcoming</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
         <div class="col-span-2">
           <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Description</label>
           <textarea id="program-description" name="description" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all resize-none" placeholder="Briefly describe the event purpose..." rows="3"></textarea>
+        </div>
+        <div class="col-span-2 flex flex-wrap items-center gap-6 pt-2">
+          <label class="flex items-center gap-2 text-sm font-semibold text-on-surface-variant">
+            <input id="program-main-service" name="is_main_service" type="checkbox" class="rounded text-primary focus:ring-primary"/>
+            Main service
+          </label>
+          <label class="flex items-center gap-2 text-sm font-semibold text-on-surface-variant">
+            <input id="program-featured" name="is_featured" type="checkbox" class="rounded text-primary focus:ring-primary"/>
+            Featured
+          </label>
         </div>
       </div>
       <div class="flex items-center gap-4 pt-4">
