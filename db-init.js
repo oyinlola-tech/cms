@@ -204,6 +204,26 @@ async function createTables(connection) {
       is_read BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS contact_replies (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      contact_message_id INT NOT NULL,
+      replied_by INT,
+      to_email VARCHAR(100) NOT NULL,
+      subject VARCHAR(150) NOT NULL,
+      message TEXT NOT NULL,
+      sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (contact_message_id) REFERENCES contact_messages(id) ON DELETE CASCADE,
+      FOREIGN KEY (replied_by) REFERENCES users(id) ON DELETE SET NULL,
+      INDEX(contact_message_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS external_links (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      link_key VARCHAR(80) NOT NULL UNIQUE,
+      label VARCHAR(120) NOT NULL,
+      url VARCHAR(800),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`,
     `CREATE TABLE IF NOT EXISTS activity_log (
       id INT AUTO_INCREMENT PRIMARY KEY,
       user_id INT,
@@ -251,6 +271,20 @@ async function insertDefaultWeeklySchedule(connection) {
       );
     }
     console.log('Default weekly schedule inserted.');
+  }
+}
+
+async function insertDefaultExternalLinks(connection) {
+  const results = await query(connection, 'SELECT COUNT(*) as count FROM external_links');
+  if (results[0].count === 0) {
+    const defaults = [
+      ['join_service', 'Join Our Service', null],
+      ['watch_online', 'Watch Online', null]
+    ];
+    for (const row of defaults) {
+      await query(connection, 'INSERT INTO external_links (link_key, label, url) VALUES (?, ?, ?)', row);
+    }
+    console.log('Default external links inserted.');
   }
 }
 
@@ -334,6 +368,7 @@ async function initializeDatabase() {
     // Insert default data
     await insertDefaultChurchInfo(dbConnection);
     await insertDefaultWeeklySchedule(dbConnection);
+    await insertDefaultExternalLinks(dbConnection);
     await insertDefaultAdmin(dbConnection);
 
     console.log('Database initialization complete.');

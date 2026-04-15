@@ -4,6 +4,7 @@
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>Settings - Sacred Hearth CMS</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
   
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -300,6 +301,67 @@
           </div>
           <span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">chevron_right</span>
         </a>
+      </div>
+    </div>
+
+    <!-- External Links (Public buttons wiring) -->
+    <div class="md:col-span-6 bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+      <h3 class="text-xl font-bold text-primary mb-2">External Links</h3>
+      <p class="text-sm text-on-surface-variant mb-6">Control where public buttons like “Watch Online” and “Join Our Service” redirect.</p>
+      <form id="external-links-form" class="space-y-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-primary px-1" for="link-join-service">Join Our Service URL</label>
+          <input id="link-join-service" class="ghost-input bg-surface-container-highest" type="url" placeholder="https://..." autocomplete="off" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-primary px-1" for="link-watch-online">Watch Online URL</label>
+          <input id="link-watch-online" class="ghost-input bg-surface-container-highest" type="url" placeholder="https://..." autocomplete="off" />
+        </div>
+        <div class="pt-2 flex items-center gap-3">
+          <button type="submit" class="bg-primary text-on-primary px-8 py-3 rounded-xl font-bold hover:bg-primary-container transition-all active:scale-95">Save Links</button>
+          <span id="external-links-status" class="text-xs text-on-surface-variant"></span>
+        </div>
+      </form>
+    </div>
+
+    <!-- Contact Inbox -->
+    <div class="md:col-span-12 bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <h3 class="text-xl font-bold text-primary">Contact Inbox</h3>
+          <p class="text-sm text-on-surface-variant">Messages submitted on the public Contact page.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline opacity-50">search</span>
+            <input id="contact-search" class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full text-sm focus:ring-2 focus:ring-primary/20 w-72" placeholder="Search messages..." type="text"/>
+          </div>
+          <label class="flex items-center gap-2 text-sm font-semibold text-primary/80">
+            <input id="contact-unread-only" type="checkbox" class="accent-primary w-4 h-4"/>
+            Unread only
+          </label>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-surface-container-low text-primary uppercase text-[10px] font-black tracking-[0.2em]">
+              <th class="px-6 py-4 rounded-l-xl">Status</th>
+              <th class="px-6 py-4">From</th>
+              <th class="px-6 py-4">Subject</th>
+              <th class="px-6 py-4 rounded-r-xl">Date</th>
+            </tr>
+          </thead>
+          <tbody id="contact-messages-body" class="divide-y divide-surface-container-low">
+            <tr><td class="px-6 py-6 text-sm text-on-surface-variant" colspan="4">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div id="contact-pagination-info" class="text-sm text-on-surface-variant font-semibold"></div>
+        <div id="contact-pagination-controls" class="flex flex-wrap gap-2"></div>
       </div>
     </div>
   </div>

@@ -1,19 +1,10 @@
-/**
- * Sacred Hearth CMS - Unified Frontend Application
- * API Base URL is injected by server via window.API_BASE_URL from .env
- */
-
-(function() {
+﻿(function() {
   'use strict';
-
-  // ==================== CONFIGURATION ====================
   const API_BASE = window.API_BASE_URL || '/api';
   
   // Auth token management
   let authToken = localStorage.getItem('authToken') || null;
   let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-
-  // ==================== UTILITIES ====================
   
   // Format currency (NGN)
   function formatCurrency(amount) {
@@ -25,6 +16,15 @@
       currencyDisplay: 'symbol',
       minimumFractionDigits: 2
     }).format(numeric);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   // Format date
@@ -65,7 +65,7 @@
     toast.innerHTML = `
       <div class="flex items-start gap-3">
         <span class="material-symbols-outlined text-xl leading-none">${icon}</span>
-        <div class="flex-1 text-sm font-semibold leading-6">${String(message || '')}</div>
+        <div class="flex-1 text-sm font-semibold leading-6">${escapeHtml(String(message || ''))}</div>
         <button type="button" class="p-1 rounded-lg hover:bg-white/10" aria-label="Close notification">
           <span class="material-symbols-outlined text-lg">close</span>
         </button>
@@ -83,7 +83,7 @@
     overlay.innerHTML = `
       <div class="w-full max-w-xl bg-surface rounded-2xl shadow-2xl overflow-hidden">
         <div class="px-6 py-5 border-b border-outline-variant/20 flex items-center justify-between">
-          <h3 class="text-lg font-black text-primary">${title}</h3>
+          <h3 class="text-lg font-black text-primary">${escapeHtml(title)}</h3>
           <button type="button" data-modal-close class="p-2 rounded-lg hover:bg-surface-container-low transition-colors">
             <span class="material-symbols-outlined">close</span>
           </button>
@@ -257,9 +257,39 @@
     });
   }
 
+  async function wireExternalLinks() {
+    if (window.location.pathname.startsWith('/admin')) return;
+    const targets = Array.from(document.querySelectorAll('[data-link-key]'));
+    if (targets.length === 0) return;
+    try {
+      const links = await apiRequest('/public/links');
+      targets.forEach(el => {
+        const key = el.getAttribute('data-link-key');
+        const url = key && links ? links[key] : null;
+        if (typeof url !== 'string' || !url.trim()) {
+          el.setAttribute('aria-disabled', 'true');
+          el.classList.add('opacity-70', 'cursor-not-allowed');
+          return;
+        }
+        const clean = url.trim();
+        if (el.tagName.toLowerCase() === 'a') {
+          el.setAttribute('href', clean);
+          el.setAttribute('target', '_blank');
+          el.setAttribute('rel', 'noopener noreferrer');
+        } else {
+          el.addEventListener('click', () => {
+            window.open(clean, '_blank', 'noopener');
+          });
+        }
+      });
+    } catch (_) {
+      // ignore for public pages
+    }
+  }
+
   // API request wrapper
   async function apiRequest(endpoint, options = {}) {
-    const parseAs = options.parseAs || 'json'; // 'json' | 'text' | 'blob'
+    const parseAs = options.parseAs || 'json'; 
     const headers = { ...(options.headers || {}) };
 
     const method = (options.method || 'GET').toUpperCase();
@@ -310,8 +340,6 @@
       throw error;
     }
   }
-
-  // ==================== AUTHENTICATION ====================
   
   async function login(email, password, remember) {
     const data = await apiRequest('/auth/login', {
@@ -332,8 +360,6 @@
     localStorage.removeItem('currentUser');
     window.location.href = '/admin/login';
   }
-
-  // Check auth and redirect if needed
   function requireAuth() {
     if (!authToken) {
       window.location.href = '/admin/login';
@@ -341,15 +367,11 @@
     }
     return true;
   }
-
-  // ==================== PAGE DETECTION ====================
   
   const path = window.location.pathname;
   const memberDetailsMatch = path.match(/^\/admin\/members\/(\d+)$/);
   const announcementDetailsMatch = path.match(/^\/announcements\/(\d+)$/);
-  
-  // Determine which page we're on
-  const pageDetector = {
+    const pageDetector = {
     isHome: path === '/' || path === '/public/index.html',
     isPrograms: path === '/programs' || path === '/public/pages/programs.html',
     isGallery: path === '/gallery' || path === '/public/pages/gallery.html',
@@ -372,8 +394,6 @@
     isReports: path === '/admin/reports' || path === '/src/pages/reports.html',
     isSettings: path === '/admin/settings' || path === '/src/pages/settings.html'
   };
-
-  // ==================== PUBLIC PAGES ====================
   
   // Homepage
   async function initHome() {
@@ -408,12 +428,12 @@
       <div class="col-span-12 md:col-span-8 bg-surface-container-low rounded-xl overflow-hidden flex flex-col md:flex-row group">
         <div class="md:w-1/2 overflow-hidden">
           <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-               src="${featured.image_url || '/images/placeholder.svg'}" alt="${featured.title}">
+               src="${escapeHtml(featured.image_url || '/images/placeholder.svg')}" alt="${escapeHtml(featured.title)}">
         </div>
         <div class="md:w-1/2 p-8 flex flex-col justify-center space-y-4">
-          <span class="text-secondary font-bold text-xs uppercase tracking-widest">${featured.category || 'Announcement'}</span>
-          <h3 class="font-headline text-3xl font-bold text-primary">${featured.title}</h3>
-          <p class="text-on-surface-variant">${featured.summary}</p>
+          <span class="text-secondary font-bold text-xs uppercase tracking-widest">${escapeHtml(featured.category || 'Announcement')}</span>
+          <h3 class="font-headline text-3xl font-bold text-primary">${escapeHtml(featured.title)}</h3>
+          <p class="text-on-surface-variant">${escapeHtml(featured.summary)}</p>
           <a href="/announcements/${featured.id}" class="text-primary font-bold w-fit border-b-2 border-primary/20 pb-1 hover:border-primary transition-all">Read More</a>
         </div>
       </div>
@@ -427,8 +447,8 @@
             ${item.is_new ? '<span class="bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-xs font-bold">New</span>' : ''}
             <span class="text-on-surface-variant text-sm">${formatDate(item.created_at)}</span>
           </div>
-          <h4 class="font-headline text-xl font-bold text-primary">${item.title}</h4>
-          <p class="text-sm text-on-surface-variant">${item.summary}</p>
+          <h4 class="font-headline text-xl font-bold text-primary">${escapeHtml(item.title)}</h4>
+          <p class="text-sm text-on-surface-variant">${escapeHtml(item.summary)}</p>
         </div>
       `;
     });
@@ -469,11 +489,11 @@
         <div class="w-14 h-14 bg-secondary-container flex items-center justify-center rounded-xl">
           <span class="material-symbols-outlined text-on-secondary-container text-3xl">${iconMap[prog1.type] || 'event'}</span>
         </div>
-        <h3 class="font-headline text-2xl font-bold text-primary">${prog1.title}</h3>
-        <p class="text-on-surface-variant">${prog1.description}</p>
+        <h3 class="font-headline text-2xl font-bold text-primary">${escapeHtml(prog1.title)}</h3>
+        <p class="text-on-surface-variant">${escapeHtml(prog1.description)}</p>
         <div class="pt-4 border-t border-outline-variant/30 flex items-center gap-3">
           <span class="material-symbols-outlined text-secondary">schedule</span>
-          <span class="text-sm font-semibold">${prog1.schedule}</span>
+          <span class="text-sm font-semibold">${escapeHtml(prog1.schedule)}</span>
         </div>
       </div>
       <div class="bg-primary text-on-primary rounded-xl p-8 space-y-6 shadow-2xl scale-105 z-10 relative">
@@ -481,11 +501,11 @@
         <div class="w-14 h-14 bg-surface-container-highest flex items-center justify-center rounded-xl">
           <span class="material-symbols-outlined text-primary text-3xl">${iconMap[prog2.type] || 'church'}</span>
         </div>
-        <h3 class="font-headline text-2xl font-bold">${prog2.title}</h3>
-        <p class="opacity-80">${prog2.description}</p>
+        <h3 class="font-headline text-2xl font-bold">${escapeHtml(prog2.title)}</h3>
+        <p class="opacity-80">${escapeHtml(prog2.description)}</p>
         <div class="pt-4 border-t border-on-primary/20 flex items-center gap-3">
           <span class="material-symbols-outlined text-secondary-fixed">schedule</span>
-          <span class="text-sm font-semibold">${prog2.schedule}</span>
+          <span class="text-sm font-semibold">${escapeHtml(prog2.schedule)}</span>
         </div>
         <button class="w-full py-3 bg-secondary-container text-on-secondary-fixed rounded-xl font-bold mt-4 hover:bg-secondary-fixed transition-colors">Plan Your Visit</button>
       </div>
@@ -493,11 +513,11 @@
         <div class="w-14 h-14 bg-secondary-container flex items-center justify-center rounded-xl">
           <span class="material-symbols-outlined text-on-secondary-container text-3xl">${iconMap[prog3.type] || 'groups'}</span>
         </div>
-        <h3 class="font-headline text-2xl font-bold text-primary">${prog3.title}</h3>
-        <p class="text-on-surface-variant">${prog3.description}</p>
+        <h3 class="font-headline text-2xl font-bold text-primary">${escapeHtml(prog3.title)}</h3>
+        <p class="text-on-surface-variant">${escapeHtml(prog3.description)}</p>
         <div class="pt-4 border-t border-outline-variant/30 flex items-center gap-3">
           <span class="material-symbols-outlined text-secondary">schedule</span>
-          <span class="text-sm font-semibold">${prog3.schedule}</span>
+          <span class="text-sm font-semibold">${escapeHtml(prog3.schedule)}</span>
         </div>
       </div>
     `;
@@ -523,21 +543,20 @@
     const [img1, img2, img3, img4] = images;
     container.innerHTML = `
       <div class="col-span-12 md:col-span-4 h-full">
-        <img class="w-full h-full object-cover rounded-xl shadow-lg" src="${img1.url}" alt="${img1.caption}">
+        <img class="w-full h-full object-cover rounded-xl shadow-lg" src="${escapeHtml(img1.url)}" alt="${escapeHtml(img1.caption)}">
       </div>
       <div class="col-span-12 md:col-span-8 grid grid-cols-2 gap-4">
         <div class="h-full">
-          <img class="w-full h-full object-cover rounded-xl shadow-lg" src="${img2.url}" alt="${img2.caption}">
+          <img class="w-full h-full object-cover rounded-xl shadow-lg" src="${escapeHtml(img2.url)}" alt="${escapeHtml(img2.caption)}">
         </div>
         <div class="h-full grid grid-rows-2 gap-4">
-          <img class="w-full h-full object-cover rounded-xl shadow-lg" src="${img3.url}" alt="${img3.caption}">
-          <img class="w-full h-full object-cover rounded-xl shadow-lg" src="${img4.url}" alt="${img4.caption}">
+          <img class="w-full h-full object-cover rounded-xl shadow-lg" src="${escapeHtml(img3.url)}" alt="${escapeHtml(img3.caption)}">
+          <img class="w-full h-full object-cover rounded-xl shadow-lg" src="${escapeHtml(img4.url)}" alt="${escapeHtml(img4.caption)}">
         </div>
       </div>
     `;
   }
 
-  // Programs Page (Public)
   async function initProgramsPublic() {
     await Promise.all([
       fetchUpcomingPrograms(),
@@ -581,13 +600,13 @@
           </div>
           <div class="flex-1 ${isHighlighted ? 'z-10' : ''}">
             <div class="flex flex-wrap items-center gap-3 mb-2">
-              <span class="${isHighlighted ? 'bg-on-primary/20 text-white' : 'bg-primary-container text-on-primary-container'} text-xs font-bold px-3 py-1 rounded-full">${prog.type}</span>
+              <span class="${isHighlighted ? 'bg-on-primary/20 text-white' : 'bg-primary-container text-on-primary-container'} text-xs font-bold px-3 py-1 rounded-full">${escapeHtml(prog.type)}</span>
               <span class="${isHighlighted ? 'text-on-primary/70' : 'text-on-surface-variant'} text-sm flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm">schedule</span> ${schedule || '—'}
+                <span class="material-symbols-outlined text-sm">schedule</span> ${escapeHtml(schedule || '—')}
               </span>
             </div>
-            <h3 class="text-2xl font-bold ${isHighlighted ? '' : 'text-primary'} mb-3">${prog.title}</h3>
-            <p class="${isHighlighted ? 'text-on-primary/80' : 'text-on-surface-variant'} leading-relaxed">${prog.description}</p>
+            <h3 class="text-2xl font-bold ${isHighlighted ? '' : 'text-primary'} mb-3">${escapeHtml(prog.title)}</h3>
+            <p class="${isHighlighted ? 'text-on-primary/80' : 'text-on-surface-variant'} leading-relaxed">${escapeHtml(prog.description)}</p>
           </div>
           <div class="flex items-center ${isHighlighted ? 'z-10' : ''}">
             <button class="${isHighlighted ? 'bg-secondary text-on-secondary px-6 py-3 rounded-xl font-bold hover:scale-105' : 'text-primary font-bold hover:underline'} transition-transform">Details</button>
@@ -617,11 +636,12 @@
 
     let html = '';
     programs.forEach(prog => {
+      const desc = typeof prog.description === 'string' ? prog.description : '';
       html += `
         <div class="bg-surface-container-low p-6 rounded-xl group hover:bg-surface-container-high transition-colors">
           <div class="text-on-surface-variant text-xs font-bold mb-2">${formatDate(prog.start_datetime || prog.startDatetime || prog.date).toUpperCase()}</div>
-          <h4 class="text-xl font-bold text-primary mb-2">${prog.title}</h4>
-          <p class="text-on-surface-variant text-sm mb-4">${prog.description.substring(0, 80)}...</p>
+          <h4 class="text-xl font-bold text-primary mb-2">${escapeHtml(prog.title)}</h4>
+          <p class="text-on-surface-variant text-sm mb-4">${escapeHtml(desc.substring(0, 80))}${desc.length > 80 ? '...' : ''}</p>
           <a href="/programs" class="text-secondary font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
             Watch Replay <span class="material-symbols-outlined text-sm">arrow_forward</span>
           </a>
@@ -652,10 +672,10 @@
       html += `
         <li class="flex justify-between items-start">
           <div>
-            <span class="font-bold text-primary block">${item.day_of_week || item.day || ''}</span>
-            <span class="text-sm text-on-surface-variant italic">${item.program_name || item.name || ''}</span>
+            <span class="font-bold text-primary block">${escapeHtml(item.day_of_week || item.day || '')}</span>
+            <span class="text-sm text-on-surface-variant italic">${escapeHtml(item.program_name || item.name || '')}</span>
           </div>
-          <span class="text-sm font-bold text-secondary">${time || '—'}</span>
+          <span class="text-sm font-bold text-secondary">${escapeHtml(time || '—')}</span>
         </li>
       `;
     });
@@ -686,7 +706,6 @@
       // Create bento grid layout
       let html = replace ? '' : container.innerHTML;
       images.forEach((img, index) => {
-        // Assign different spans for visual interest
         let colSpan = 'md:col-span-4';
         let rowSpan = '';
         if (index === 0) {
@@ -697,10 +716,10 @@
         
         html += `
           <div class="${colSpan} group relative overflow-hidden rounded-xl bg-surface-container-low ${index === 0 ? 'aspect-[16/9]' : 'aspect-square md:aspect-auto'}">
-            <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="${img.url}" alt="${img.caption}">
+            <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="${escapeHtml(img.url)}" alt="${escapeHtml(img.caption)}">
             <div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex flex-col justify-end p-6">
-              <span class="text-secondary-fixed text-xs font-bold uppercase tracking-widest mb-1">${img.category || 'Gallery'}</span>
-              <h3 class="text-white text-xl font-bold font-headline">${img.caption}</h3>
+              <span class="text-secondary-fixed text-xs font-bold uppercase tracking-widest mb-1">${escapeHtml(img.category || 'Gallery')}</span>
+              <h3 class="text-white text-xl font-bold font-headline">${escapeHtml(img.caption)}</h3>
             </div>
           </div>
         `;
@@ -751,13 +770,12 @@
       
       let html = replace ? '' : grid.innerHTML;
       items.forEach((item, index) => {
-        // First item featured layout
         if (index === 0 && replace) {
           html += `
             <article class="md:col-span-8 group relative overflow-hidden rounded-xl bg-surface-container-lowest editorial-shadow">
-              <div class="flex flex-col md:flex-row h-full">
-                <div class="md:w-1/2 overflow-hidden h-64 md:h-full">
-                  <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="${item.image_url || '/images/placeholder.svg'}" alt="${item.title}">
+                <div class="flex flex-col md:flex-row h-full">
+                  <div class="md:w-1/2 overflow-hidden h-64 md:h-full">
+                  <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="${escapeHtml(item.image_url || '/images/placeholder.svg')}" alt="${escapeHtml(item.title)}">
                 </div>
                 <div class="md:w-1/2 p-10 flex flex-col justify-between">
                   <div>
@@ -765,8 +783,8 @@
                       <span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded text-xs font-bold">FEATURED</span>
                       <span class="text-outline text-xs font-medium">${formatDate(item.created_at).toUpperCase()}</span>
                     </div>
-                    <h2 class="text-3xl font-headline text-primary mb-4">${item.title}</h2>
-                    <p class="text-on-surface-variant leading-relaxed mb-6">${item.summary}</p>
+                    <h2 class="text-3xl font-headline text-primary mb-4">${escapeHtml(item.title)}</h2>
+                    <p class="text-on-surface-variant leading-relaxed mb-6">${escapeHtml(item.summary)}</p>
                   </div>
                   <a href="/announcements/${item.id}" class="inline-flex items-center gap-2 text-primary font-bold hover:gap-4 transition-all">Read Full Story <span class="material-symbols-outlined">arrow_forward</span></a>
                 </div>
@@ -774,12 +792,11 @@
             </article>
           `;
         } else {
-          // Regular card
           html += `
             <article class="md:col-span-4 bg-surface-container-low p-8 rounded-xl hover:bg-surface-container-high transition-colors group">
-              <span class="text-secondary font-bold text-xs tracking-widest uppercase mb-4 block">${item.category}</span>
-              <h3 class="text-xl font-headline text-primary mb-3">${item.title}</h3>
-              <p class="text-on-surface-variant text-sm leading-relaxed mb-6">${item.summary}</p>
+              <span class="text-secondary font-bold text-xs tracking-widest uppercase mb-4 block">${escapeHtml(item.category)}</span>
+              <h3 class="text-xl font-headline text-primary mb-3">${escapeHtml(item.title)}</h3>
+              <p class="text-on-surface-variant text-sm leading-relaxed mb-6">${escapeHtml(item.summary)}</p>
               <div class="flex items-center justify-between">
                 <span class="text-xs text-outline font-medium">${formatDate(item.created_at).toUpperCase()}</span>
                 <a href="/announcements/${item.id}" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-primary editorial-shadow">
@@ -854,7 +871,6 @@
     }
   }
 
-  // Contact Page
   function initContact() {
     const form = document.getElementById('contact-form');
     if (!form) return;
@@ -865,7 +881,7 @@
         const data = await apiRequest('/church/info');
         document.getElementById('church-phone').textContent = data.phone;
         document.getElementById('church-email').textContent = data.email;
-        document.getElementById('church-address').innerHTML = data.address.replace(/\n/g, '<br>');
+        document.getElementById('church-address').innerHTML = escapeHtml(data.address).replace(/\n/g, '<br>');
       } catch (error) {
         console.error('Failed to load church info:', error);
       }
@@ -894,7 +910,6 @@
     });
   }
 
-  // ==================== AUTH PAGES ====================
   
   // Login
   function initLogin() {
@@ -940,12 +955,10 @@
           body: JSON.stringify({ email })
         });
         
-        // Show success and redirect to OTP
         statusDiv.textContent = 'OTP sent! Redirecting...';
         statusDiv.className = 'p-4 rounded-xl bg-green-100 text-green-700 text-sm';
         statusDiv.classList.remove('hidden');
         
-        // Store email for OTP page
         sessionStorage.setItem('resetEmail', email);
         setTimeout(() => {
           window.location.href = '/admin/verify-otp';
@@ -1054,7 +1067,6 @@
     const strengthText = document.getElementById('strength-text');
     const matchHint = document.getElementById('password-match-hint');
     
-    // Get token from URL
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     document.getElementById('reset-token').value = token || '';
@@ -1120,7 +1132,6 @@
     });
   }
 
-  // ==================== ADMIN DASHBOARD ====================
   
   async function initDashboard() {
     if (!requireAuth()) return;
@@ -1140,6 +1151,99 @@
     
     // Logout button
     document.getElementById('logout-btn')?.addEventListener('click', logout);
+
+    // Quick finance (dashboard modal)
+    document.getElementById('quick-finance')?.addEventListener('click', async () => {
+      try {
+        const recent = await apiRequest('/finance/transactions?page=1&limit=5');
+        const items = (recent && recent.items) ? recent.items : [];
+        const recentHtml = items.length === 0
+          ? '<div class="text-sm text-on-surface-variant">No recent transactions yet.</div>'
+          : `
+            <div class="space-y-2">
+              ${items.map(tx => `
+                <div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/10">
+                  <div class="min-w-0">
+                    <div class="text-xs font-black text-on-surface-variant">${formatDate(tx.date)} • ${escapeHtml(tx.category || tx.type || 'Transaction')}</div>
+                    <div class="text-sm font-semibold text-primary truncate">${escapeHtml(tx.description || tx.reference || '')}</div>
+                  </div>
+                  <div class="text-sm font-black ${tx.type === 'income' ? 'text-primary' : 'text-error'}">
+                    ${tx.type === 'expense' ? '-' : ''}${formatCurrency(tx.amount)}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+
+        openModal({
+          title: 'Finance Update',
+          submitLabel: 'Add Transaction',
+          contentHtml: `
+            <div>
+              <div class="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] mb-2">Recent updates</div>
+              ${recentHtml}
+            </div>
+            <div class="h-px bg-outline-variant/20 my-2"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Type</label>
+                <select name="type" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20">
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Category</label>
+                <input name="category" required class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" placeholder="e.g., Tithe" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Amount (NGN)</label>
+                <input name="amount" type="number" min="0" step="0.01" required class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Transaction Date</label>
+                <input name="transaction_date" type="date" required class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Payment Method</label>
+                <select name="payment_method" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20">
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="mobile">Mobile</option>
+                  <option value="card">Card</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Status</label>
+                <select name="status" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20">
+                  <option value="completed">Completed</option>
+                  <option value="pending">Pending</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-xs font-bold text-on-surface-variant">Description</label>
+                <input name="description" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" placeholder="Optional note" />
+              </div>
+            </div>
+          `,
+          onSubmit: async (fd, close) => {
+            const payload = Object.fromEntries(fd.entries());
+            try {
+              await apiRequest('/finance/transactions', { method: 'POST', body: JSON.stringify(payload) });
+              showToast('Transaction created', 'success');
+              close();
+              await Promise.all([loadDashboardStats(), loadDonationChart(), loadRecentActivity()]);
+            } catch (e) {
+              showToast(e.message, 'error');
+            }
+          }
+        });
+      } catch (e) {
+        showToast('Failed to load finance updates', 'error');
+      }
+    });
   }
 
   async function loadDashboardStats() {
@@ -1217,8 +1321,8 @@
                 <span class="material-symbols-outlined">${iconMap[activity.type] || 'notifications'}</span>
               </div>
               <div>
-                <p class="text-sm font-bold text-primary">${activity.title}</p>
-                <p class="text-xs text-on-surface-variant">${activity.description}</p>
+                <p class="text-sm font-bold text-primary">${escapeHtml(activity.title)}</p>
+                <p class="text-xs text-on-surface-variant">${escapeHtml(activity.description)}</p>
               </div>
             </div>
             <span class="text-xs text-on-surface-variant font-medium">${timeAgo(createdAt)}</span>
@@ -1238,7 +1342,7 @@
       if (!container) return;
       
       container.innerHTML = `
-        <h3 class="text-2xl font-black mb-2">${data.title}</h3>
+        <h3 class="text-2xl font-black mb-2">${escapeHtml(data.title)}</h3>
         <div class="flex items-center gap-2 text-sm text-on-primary-container font-semibold mb-6">
           <span class="material-symbols-outlined text-sm">calendar_today</span>
           ${data.date ? formatDate(data.date, { weekday: 'long', month: 'long', day: 'numeric' }) : '—'}
@@ -1251,8 +1355,6 @@
       console.error('Failed to load upcoming event:', error);
     }
   }
-
-  // ==================== ADMIN MEMBERS ====================
   
   async function initMembers() {
     if (!requireAuth()) return;
@@ -1283,17 +1385,17 @@
           <tr class="hover:bg-surface-container-low transition-colors">
             <td class="px-6 py-5 flex items-center gap-3">
               <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-fixed">
-                <img class="w-full h-full object-cover" src="${member.avatar || '/images/default-avatar.svg'}" alt="${member.name}">
+                <img class="w-full h-full object-cover" src="${escapeHtml(member.avatar || '/images/default-avatar.svg')}" alt="${escapeHtml(member.name)}">
               </div>
               <div>
-                <p class="font-bold text-primary">${member.name}</p>
-                <p class="text-xs text-on-surface-variant">${member.member_type}</p>
+                <p class="font-bold text-primary">${escapeHtml(member.name)}</p>
+                <p class="text-xs text-on-surface-variant">${escapeHtml(member.member_type)}</p>
               </div>
             </td>
-            <td class="px-6 py-5 text-on-surface-variant font-medium">${member.phone}</td>
-            <td class="px-6 py-5 text-on-surface-variant">${member.email}</td>
+            <td class="px-6 py-5 text-on-surface-variant font-medium">${escapeHtml(member.phone)}</td>
+            <td class="px-6 py-5 text-on-surface-variant">${escapeHtml(member.email)}</td>
             <td class="px-6 py-5">
-              <span class="bg-primary-container/10 text-primary-container text-[10px] font-bold px-2 py-1 rounded-full">${member.department || '—'}</span>
+              <span class="bg-primary-container/10 text-primary-container text-[10px] font-bold px-2 py-1 rounded-full">${escapeHtml(member.department || '—')}</span>
             </td>
             <td class="px-6 py-5 text-on-surface-variant">${formatDate(member.joined_date)}</td>
             <td class="px-6 py-5">
@@ -1521,8 +1623,8 @@
         const rows = (data.recentTransactions || []).map(tx => `
           <tr class="hover:bg-surface-container-low transition-colors">
             <td class="py-4 pr-4 text-sm font-medium text-on-surface-variant">${formatDate(tx.date)}</td>
-            <td class="py-4 pr-4 text-sm font-bold text-primary">${tx.category || '—'}</td>
-            <td class="py-4 pr-4 text-sm font-medium text-on-surface-variant">${tx.method || '—'}</td>
+            <td class="py-4 pr-4 text-sm font-bold text-primary">${escapeHtml(tx.category || '—')}</td>
+            <td class="py-4 pr-4 text-sm font-medium text-on-surface-variant">${escapeHtml(tx.method || '—')}</td>
             <td class="py-4 text-right text-sm font-black text-primary">${formatCurrency(tx.amount)}</td>
           </tr>
         `).join('');
@@ -1539,7 +1641,7 @@
               <span class="material-symbols-outlined text-base">${ok ? 'check_circle' : 'cancel'}</span>
               <div class="text-xs font-bold">
                 <div>${formatDate(a.event_date)}</div>
-                <div class="opacity-70 font-semibold">${a.service_type || 'Service'}</div>
+                <div class="opacity-70 font-semibold">${escapeHtml(a.service_type || 'Service')}</div>
               </div>
             </div>
           `;
@@ -1561,11 +1663,11 @@
             <div class="flex items-center justify-between gap-4 p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/10">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-fixed flex-shrink-0">
-                  <img class="w-full h-full object-cover" src="${l.avatar || '/images/default-avatar.svg'}" alt="${l.name}">
+                  <img class="w-full h-full object-cover" src="${escapeHtml(l.avatar || '/images/default-avatar.svg')}" alt="${escapeHtml(l.name)}">
                 </div>
                 <div class="min-w-0">
-                  <p class="text-sm font-black text-primary truncate">${l.name}</p>
-                  <p class="text-xs text-on-surface-variant truncate">${l.relationship || 'Household'}</p>
+                  <p class="text-sm font-black text-primary truncate">${escapeHtml(l.name)}</p>
+                  <p class="text-xs text-on-surface-variant truncate">${escapeHtml(l.relationship || 'Household')}</p>
                 </div>
               </div>
               <div class="flex items-center gap-2 flex-shrink-0">
@@ -1648,11 +1750,11 @@
           results.innerHTML = items.map(m => `
             <button type="button" data-pick="${m.id}" class="w-full text-left px-4 py-3 hover:bg-surface-container-low transition-colors flex items-center gap-3">
               <div class="w-9 h-9 rounded-full overflow-hidden bg-primary-fixed flex-shrink-0">
-                <img class="w-full h-full object-cover" src="${m.avatar || '/images/default-avatar.svg'}" alt="${m.name}">
+                <img class="w-full h-full object-cover" src="${escapeHtml(m.avatar || '/images/default-avatar.svg')}" alt="${escapeHtml(m.name)}">
               </div>
               <div class="min-w-0">
-                <div class="text-sm font-black text-primary truncate">${m.name}</div>
-                <div class="text-xs text-on-surface-variant truncate">${m.email || m.phone || ''}</div>
+                <div class="text-sm font-black text-primary truncate">${escapeHtml(m.name)}</div>
+                <div class="text-xs text-on-surface-variant truncate">${escapeHtml(m.email || m.phone || '')}</div>
               </div>
             </button>
           `).join('');
@@ -1732,12 +1834,22 @@
                   <option value="child" ${member.member_type === 'child' ? 'selected' : ''}>Child</option>
                 </select>
               </div>
+              <div class="md:col-span-2">
+                <label class="text-xs font-bold text-on-surface-variant">New Photo (optional)</label>
+                <input name="avatar" type="file" accept="image/*" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-surface-container-highest file:text-primary file:font-bold" />
+              </div>
             </div>
           `,
           onSubmit: async (formData, close) => {
-            const payload = Object.fromEntries(formData.entries());
+            const avatarFile = formData.get('avatar');
+            const payload = Object.fromEntries(Array.from(formData.entries()).filter(([k]) => k !== 'avatar'));
             try {
               await apiRequest(`/members/${memberId}`, { method: 'PUT', body: JSON.stringify(payload) });
+              if (avatarFile && avatarFile instanceof File && avatarFile.size > 0) {
+                const fd = new FormData();
+                fd.append('avatar', avatarFile);
+                await apiRequest(`/members/${memberId}/avatar`, { method: 'POST', body: fd });
+              }
               showToast('Member updated', 'success');
               close();
               await initMemberDetails(memberId);
@@ -1755,7 +1867,6 @@
     }
   }
 
-  // ==================== ADMIN FINANCE ====================
   
   async function initFinance() {
     if (!requireAuth()) return;
@@ -1801,12 +1912,12 @@
             <td class="px-6 py-5">
               <span class="flex items-center gap-2 text-sm font-bold ${typeColor}">
                 <span class="w-2 h-2 rounded-full ${tx.type === 'income' ? 'bg-secondary' : 'bg-tertiary'}"></span>
-                ${tx.category}
+                ${escapeHtml(tx.category)}
               </span>
             </td>
-            <td class="px-6 py-5 text-sm font-medium text-on-surface italic">${tx.description}</td>
+            <td class="px-6 py-5 text-sm font-medium text-on-surface italic">${escapeHtml(tx.description)}</td>
             <td class="px-6 py-5">
-              <span class="${statusClasses} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${tx.status}</span>
+              <span class="${statusClasses} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${escapeHtml(tx.status)}</span>
             </td>
             <td class="px-6 py-5 text-right font-black ${typeColor}">${amountPrefix}${formatCurrency(tx.amount)}</td>
           </tr>
@@ -1819,7 +1930,6 @@
       const info = document.getElementById('pagination-info');
       const controls = document.getElementById('pagination-controls');
       if (info) info.textContent = `Showing ${data.from} to ${data.to} of ${data.total} transactions`;
-      // Similar pagination as members...
     }
     
     await loadFinanceData();
@@ -1906,7 +2016,6 @@
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
 
-  // ==================== ADMIN PROGRAMS ====================
   
   async function initProgramsAdmin() {
     if (!requireAuth()) return;
@@ -1966,7 +2075,7 @@
       if (!tableBody) return;
       tableBody.innerHTML = items.map(p => {
         const start = p.start_datetime ? new Date(p.start_datetime) : null;
-        const schedule = start ? `${formatDate(start.toISOString())} • ${formatTime(start.toISOString())}` : '—';
+        const schedule = start ? `${formatDate(start.toISOString())} â€¢ ${formatTime(start.toISOString())}` : '—';
         const statusColor =
           p.status === 'upcoming' ? 'bg-secondary-container text-on-secondary-container' :
           p.status === 'ongoing' ? 'bg-primary-fixed text-on-primary-fixed-variant' :
@@ -1977,14 +2086,14 @@
           <tr class="hover:bg-surface-container-low transition-colors">
             <td class="px-6 py-5">
               <div class="flex flex-col">
-                <span class="text-sm font-black text-primary">${p.title}</span>
-                <span class="text-xs text-on-surface-variant">${p.location || '—'} • ${p.category || '—'}</span>
+                <span class="text-sm font-black text-primary">${escapeHtml(p.title)}</span>
+                <span class="text-xs text-on-surface-variant">${escapeHtml(p.location || '—')} â€¢ ${escapeHtml(p.category || '—')}</span>
               </div>
             </td>
-            <td class="px-6 py-5 text-sm font-bold text-primary">${(p.type || 'service').replaceAll('_', ' ')}</td>
+            <td class="px-6 py-5 text-sm font-bold text-primary">${escapeHtml((p.type || 'service').replaceAll('_', ' '))}</td>
             <td class="px-6 py-5 text-sm font-medium text-on-surface-variant">${schedule}</td>
             <td class="px-6 py-5">
-              <span class="${statusColor} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${p.status || 'draft'}</span>
+              <span class="${statusColor} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${escapeHtml(p.status || 'draft')}</span>
             </td>
             <td class="px-6 py-5 text-right">
               <div class="flex justify-end gap-2">
@@ -2120,7 +2229,6 @@
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
 
-  // ==================== ADMIN ANNOUNCEMENTS ====================
   
   async function initAnnouncementsAdmin() {
     if (!requireAuth()) return;
@@ -2140,7 +2248,7 @@
     const priorityBtns = document.querySelectorAll('#priority-selector .priority-btn');
     const priorityInput = document.getElementById('announcement-priority');
 
-    let submitMode = 'publish'; // 'publish' | 'draft'
+    let submitMode = 'publish'; 
 
     function open() {
       modal?.classList.remove('hidden');
@@ -2198,6 +2306,8 @@
       if (!tableBody) return;
       tableBody.innerHTML = items.map(a => {
         const date = a.created_at ? formatDate(a.created_at) : '';
+        const summaryText = typeof a.summary === 'string' ? a.summary : '';
+        const summaryShort = summaryText.substring(0, 90);
         const statusColor =
           a.status === 'published' ? 'bg-primary-fixed text-on-primary-fixed-variant' :
           a.status === 'draft' ? 'bg-surface-container-highest text-on-surface-variant' :
@@ -2207,12 +2317,12 @@
           <tr class="hover:bg-surface-container-low transition-colors">
             <td class="px-6 py-5">
               <div class="flex flex-col gap-1">
-                <span class="text-sm font-black text-primary">${a.title}</span>
-                <span class="text-xs text-on-surface-variant">${(a.summary || '').substring(0, 90)}${a.summary && a.summary.length > 90 ? '…' : ''}</span>
+                <span class="text-sm font-black text-primary">${escapeHtml(a.title)}</span>
+                <span class="text-xs text-on-surface-variant">${escapeHtml(summaryShort)}${summaryText.length > 90 ? 'â€¦' : ''}</span>
               </div>
             </td>
-            <td class="px-6 py-5 text-sm font-bold text-primary">${a.category || 'General'}</td>
-            <td class="px-6 py-5"><span class="${statusColor} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${a.status}</span></td>
+            <td class="px-6 py-5 text-sm font-bold text-primary">${escapeHtml(a.category || 'General')}</td>
+            <td class="px-6 py-5"><span class="${statusColor} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${escapeHtml(a.status)}</span></td>
             <td class="px-6 py-5 text-sm font-medium text-on-surface-variant">${date}</td>
             <td class="px-6 py-5 text-right">
               <div class="flex justify-end gap-2">
@@ -2347,8 +2457,6 @@
     await loadAnnouncements(1);
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
-
-  // ==================== ADMIN GALLERY ====================
   
   async function initGalleryAdmin() {
     if (!requireAuth()) return;
@@ -2384,7 +2492,7 @@
         const bytes = Number(s.storageBytes || 0);
         const mb = (bytes / (1024 * 1024));
         const total = Number(s.totalImages || 0);
-        document.getElementById('storage-usage-text') && (document.getElementById('storage-usage-text').textContent = `${mb.toFixed(1)} MB used • ${total} images`);
+        document.getElementById('storage-usage-text') && (document.getElementById('storage-usage-text').textContent = `${mb.toFixed(1)} MB used â€¢ ${total} images`);
         const limitMb = 500;
         const pct = Math.min(100, Math.round((mb / limitMb) * 100));
         document.getElementById('storage-progress-bar') && (document.getElementById('storage-progress-bar').style.width = `${pct}%`);
@@ -2411,7 +2519,7 @@
       grid.innerHTML = items.map(img => `
         <div class="bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/20">
           <div class="relative aspect-square bg-surface-container-low">
-            <img src="${img.url}" alt="${img.caption || 'Gallery image'}" class="w-full h-full object-cover"/>
+            <img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.caption || 'Gallery image')}" class="w-full h-full object-cover"/>
             <div class="absolute top-3 left-3">
               <input type="checkbox" class="w-4 h-4 accent-primary" data-select-id="${img.id}"/>
             </div>
@@ -2426,10 +2534,10 @@
           </div>
           <div class="p-4 space-y-1">
             <div class="flex items-center justify-between gap-2">
-              <p class="text-sm font-black text-primary truncate">${img.caption || 'Untitled'}</p>
+              <p class="text-sm font-black text-primary truncate">${escapeHtml(img.caption || 'Untitled')}</p>
               ${img.is_featured ? '<span class="text-[10px] font-black bg-secondary-container text-on-secondary-container px-2 py-1 rounded-full">FEATURED</span>' : ''}
             </div>
-            <p class="text-xs text-on-surface-variant truncate">${img.category || '—'}</p>
+            <p class="text-xs text-on-surface-variant truncate">${escapeHtml(img.category || '—')}</p>
           </div>
         </div>
       `).join('');
@@ -2563,15 +2671,12 @@
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
 
-  // ==================== ADMIN REPORTS ====================
   
   async function initReports() {
     if (!requireAuth()) return;
     console.log('Reports initialized');
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
-
-  // ==================== ADMIN SETTINGS ====================
   
   async function initSettings() {
     if (!requireAuth()) return;
@@ -2587,8 +2692,170 @@
       // Security info
       document.getElementById('twofa-status').textContent = user.twofaEnabled ? 'ACTIVE' : 'INACTIVE';
       document.getElementById('active-sessions').textContent = user.activeSessions || '1';
+      document.getElementById('last-login-time').textContent = user.lastLogin ? formatDate(user.lastLogin, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+      document.getElementById('last-login-ip').textContent = user.lastIp ? `IP: ${user.lastIp}` : '—';
     } catch (error) {
       console.error('Failed to load profile:', error);
+    }
+
+    // External links settings
+    async function loadExternalLinks() {
+      const joinInput = document.getElementById('link-join-service');
+      const watchInput = document.getElementById('link-watch-online');
+      if (!joinInput || !watchInput) return;
+      try {
+        const rows = await apiRequest('/admin/settings/links');
+        const map = {};
+        (rows || []).forEach(r => {
+          if (r && r.key) map[r.key] = r.url || '';
+        });
+        joinInput.value = map.join_service || '';
+        watchInput.value = map.watch_online || '';
+      } catch (e) {
+        console.error('Failed to load external links:', e);
+      }
+    }
+
+    await loadExternalLinks();
+
+    document.getElementById('external-links-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const joinUrl = (document.getElementById('link-join-service')?.value || '').trim();
+      const watchUrl = (document.getElementById('link-watch-online')?.value || '').trim();
+      const status = document.getElementById('external-links-status');
+      if (status) status.textContent = 'Saving…';
+      try {
+        await apiRequest('/admin/settings/links', {
+          method: 'PUT',
+          body: JSON.stringify({
+            links: [
+              { key: 'join_service', url: joinUrl },
+              { key: 'watch_online', url: watchUrl }
+            ]
+          })
+        });
+        if (status) status.textContent = 'Saved.';
+        showToast('Links updated', 'success');
+      } catch (err) {
+        if (status) status.textContent = '';
+        showToast(err.message, 'error');
+      }
+    });
+
+    // Contact inbox
+    const contactBody = document.getElementById('contact-messages-body');
+    const contactInfo = document.getElementById('contact-pagination-info');
+    const contactControls = document.getElementById('contact-pagination-controls');
+    const contactSearch = document.getElementById('contact-search');
+    const unreadOnly = document.getElementById('contact-unread-only');
+    let contactPage = 1;
+    let contactSearchValue = '';
+
+    async function loadContactMessages(page = 1) {
+      if (!contactBody) return;
+      contactPage = page;
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: '10',
+        search: contactSearchValue,
+        unreadOnly: unreadOnly?.checked ? 'true' : 'false'
+      });
+      try {
+        const data = await apiRequest(`/admin/contact/messages?${params.toString()}`);
+        const items = data.items || [];
+        if (items.length === 0) {
+          contactBody.innerHTML = '<tr><td class="px-6 py-6 text-sm text-on-surface-variant" colspan="4">No messages found.</td></tr>';
+        } else {
+          contactBody.innerHTML = items.map(m => `
+            <tr class="hover:bg-surface-container-low transition-colors cursor-pointer" data-contact-id="${m.id}">
+              <td class="px-6 py-5">
+                <span class="${m.isRead ? 'bg-surface-container-highest text-on-surface-variant' : 'bg-secondary-container text-on-secondary-container'} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  ${m.isRead ? 'READ' : 'NEW'}
+                </span>
+              </td>
+              <td class="px-6 py-5 text-sm font-semibold text-primary">${escapeHtml(m.name)}<div class="text-xs text-on-surface-variant font-medium">${escapeHtml(m.email)}</div></td>
+              <td class="px-6 py-5 text-sm text-on-surface-variant">${escapeHtml(m.subject || '(no subject)')}</td>
+              <td class="px-6 py-5 text-sm text-on-surface-variant">${formatDate(m.createdAt)}</td>
+            </tr>
+          `).join('');
+        }
+        if (contactInfo) contactInfo.textContent = data.total ? `Showing ${data.from} to ${data.to} of ${data.total} messages` : '';
+        renderPaginationControls(contactControls, data.page, data.totalPages, (p) => loadContactMessages(p));
+
+        contactBody.querySelectorAll('tr[data-contact-id]').forEach(row => {
+          row.addEventListener('click', async () => {
+            const id = row.getAttribute('data-contact-id');
+            const msg = items.find(x => String(x.id) === String(id));
+            if (!msg) return;
+
+            const { overlay } = openModal({
+              title: `Contact Message #${msg.id}`,
+              submitLabel: 'Send Reply',
+              contentHtml: `
+                <div class="space-y-2">
+                  <div class="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em]">From</div>
+                  <div class="text-sm font-black text-primary">${escapeHtml(msg.name)} <span class="text-on-surface-variant font-semibold">(${escapeHtml(msg.email)})</span></div>
+                  ${msg.phone ? `<div class="text-sm text-on-surface-variant">Phone: ${escapeHtml(msg.phone)}</div>` : ''}
+                  <div class="text-sm text-on-surface-variant">Received: ${formatDate(msg.createdAt)} ${msg.isRead ? '' : '<span class="ml-2 text-[10px] font-black bg-secondary-container text-on-secondary-container px-2 py-1 rounded-full">NEW</span>'}</div>
+                </div>
+                <div class="mt-4 p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/10">
+                  <div class="text-xs font-black text-on-surface-variant uppercase tracking-[0.2em] mb-2">Message</div>
+                  <div class="text-sm text-on-surface-variant leading-6">${escapeHtml(msg.message).replace(/\\n/g, '<br>')}</div>
+                </div>
+                <div class="mt-4 grid grid-cols-1 gap-3">
+                  <div>
+                    <label class="text-xs font-bold text-on-surface-variant">Subject</label>
+                    <input name="subject" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" value="${escapeHtml(msg.subject ? `Re: ${msg.subject}` : 'Re: Your message')}" required />
+                  </div>
+                  <div>
+                    <label class="text-xs font-bold text-on-surface-variant">Reply</label>
+                    <textarea name="message" rows="6" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" placeholder="Type your reply..." required></textarea>
+                  </div>
+                  <button type="button" data-mark-read class="w-fit px-4 py-2 rounded-xl font-bold bg-surface-container-lowest border border-outline-variant/20 hover:bg-surface-container-low transition-colors text-primary">Mark as read</button>
+                </div>
+              `,
+              onSubmit: async (fd, close) => {
+                const payload = { subject: fd.get('subject'), message: fd.get('message') };
+                try {
+                  await apiRequest(`/admin/contact/messages/${msg.id}/reply`, { method: 'POST', body: JSON.stringify(payload) });
+                  showToast('Reply sent', 'success');
+                  close();
+                  await loadContactMessages(contactPage);
+                } catch (err) {
+                  showToast(err.message, 'error');
+                }
+              }
+            });
+
+            overlay?.querySelector('[data-mark-read]')?.addEventListener('click', async () => {
+              try {
+                await apiRequest(`/admin/contact/messages/${msg.id}/read`, { method: 'PUT' });
+                showToast('Marked as read', 'success');
+                await loadContactMessages(contactPage);
+              } catch (err) {
+                showToast(err.message, 'error');
+              }
+            });
+          });
+        });
+      } catch (err) {
+        contactBody.innerHTML = '<tr><td class="px-6 py-6 text-sm text-error" colspan="4">Failed to load messages.</td></tr>';
+      }
+    }
+
+    if (contactBody) {
+      await loadContactMessages(1);
+      if (contactSearch) {
+        let t;
+        contactSearch.addEventListener('input', () => {
+          clearTimeout(t);
+          t = setTimeout(() => {
+            contactSearchValue = (contactSearch.value || '').trim();
+            loadContactMessages(1);
+          }, 350);
+        });
+      }
+      unreadOnly?.addEventListener('change', () => loadContactMessages(1));
     }
     
     // Profile form
@@ -2636,11 +2903,11 @@
     document.getElementById('logout-btn')?.addEventListener('click', logout);
   }
 
-  // ==================== INITIALIZATION ====================
   
   document.addEventListener('DOMContentLoaded', () => {
     normalizeAdminSidebar();
     renderPublicChrome();
+    wireExternalLinks();
     // Public pages
     if (pageDetector.isHome) initHome();
     else if (pageDetector.isPrograms) initProgramsPublic();

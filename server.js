@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { escapeHtml, percentChange, isSafeHttpUrl } = require('./lib/utils');
 
 // Import database initializer
 const { initializeDatabase } = require('./db-init');
@@ -22,7 +23,8 @@ let db;
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
-// ==================== EMAIL TRANSPORTER (production only) ====================
+
+//Email transporter for production
 let transporter = null;
 if (NODE_ENV === 'production') {
   transporter = nodemailer.createTransport({
@@ -52,7 +54,77 @@ async function sendOTP(email, otp) {
   }
 }
 
-// ==================== MIDDLEWARE ====================
+async function sendAppEmail({ to, subject, text, html }) {
+  if (NODE_ENV === 'production') {
+    if (!transporter) throw new Error('SMTP is not configured');
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || '"Sacred Hearth CMS" <noreply@sacredhearth.org>',
+      to,
+      subject,
+      text,
+      html
+    });
+    return;
+  }
+  console.log('\n[DEV EMAIL]');
+  console.log('To:', to);
+  console.log('Subject:', subject);
+  console.log(text || '(no text)');
+  console.log('[/DEV EMAIL]\n');
+}
+
+function renderBrandedEmail({ title, preheader, bodyHtml, footerNote }) {
+  const brand = {
+    primary: '#002d1c',
+    secondary: '#735c00',
+    surface: '#fbf9f5',
+    text: '#1b1c1a'
+  };
+  const safeTitle = escapeHtml(title);
+  const safePreheader = escapeHtml(preheader || '');
+  const safeFooter = escapeHtml(footerNote || '');
+
+  return `
+  <!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>${safeTitle}</title>
+    </head>
+    <body style="margin:0;padding:0;background:${brand.surface};color:${brand.text};font-family:Arial,Helvetica,sans-serif;">
+      <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${safePreheader}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:${brand.surface};padding:24px 12px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.06);">
+              <tr>
+                <td style="padding:22px 24px;background:${brand.primary};color:#ffffff;">
+                  <div style="font-size:14px;letter-spacing:0.18em;text-transform:uppercase;opacity:0.9;">Sacred Hearth</div>
+                  <div style="font-size:22px;font-weight:800;margin-top:6px;line-height:1.2;">${safeTitle}</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:22px 24px;">
+                  ${bodyHtml}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:18px 24px;background:#f5f3ef;color:#414844;font-size:12px;line-height:1.6;">
+                  <div style="font-weight:700;color:${brand.secondary};margin-bottom:6px;">Need help?</div>
+                  <div>${safeFooter}</div>
+                </td>
+              </tr>
+            </table>
+            <div style="font-size:11px;opacity:0.6;margin-top:14px;">© ${new Date().getFullYear()} Sacred Hearth CMS</div>
+          </td>
+        </tr>
+      </table>
+    </body>
+  </html>
+  `;
+}
+
 const configuredOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
   .map(s => s.trim())
@@ -70,13 +142,29 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
-// Basic security headers (lightweight alternative to helmet)
+//Helmet
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+
+  // Pragmatic CSP: compatible with current Tailwind CDN + inline config usage.
+  // XSS is still primarily prevented by output-encoding in the frontend.
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: https:",
+    "connect-src 'self'"
+  ].join('; '));
   if (NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   }
@@ -85,15 +173,21 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/js', express.static(path.join(__dirname, 'js')));
+app.get('/favicon.ico', (req, res) => res.redirect(301, '/favicon.svg'));
 
 // Create uploads directory
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', express.static(uploadsDir, {
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  }
+}));
 
-// Multer setup
+// Multer 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
@@ -158,7 +252,7 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// ==================== AUTH ROUTES ====================
+//Auth middleware
 app.post('/api/auth/login', rateLimit({ windowMs: 60_000, max: 10, keyPrefix: 'login' }), async (req, res) => {
   const { email, password } = req.body;
   if (!isValidEmail(email) || typeof password !== 'string') {
@@ -195,7 +289,7 @@ app.post('/api/auth/forgot-password', rateLimit({ windowMs: 10 * 60_000, max: 5,
   db.query('SELECT id FROM users WHERE email = ?', [email], async (err, results) => {
     if (err) return res.status(500).json({ message: err.message });
     if (results.length === 0) {
-      // Don't reveal existence
+      // Don't reveal existence for basic secrurity
       return res.json({ message: 'If an account exists, an OTP has been sent.' });
     }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -304,7 +398,7 @@ app.put('/api/auth/profile', authenticate, (req, res) => {
     });
 });
 
-// ==================== PUBLIC API ====================
+//Public
 app.get('/api/announcements', (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const page = parseInt(req.query.page) || 1;
@@ -401,11 +495,14 @@ app.get('/api/church/info', (req, res) => {
   });
 });
 
-app.post('/api/contact/send', (req, res) => {
+app.post('/api/contact/send', rateLimit({ windowMs: 10 * 60_000, max: 10, keyPrefix: 'contact' }), (req, res) => {
   const { name, email, phone, subject, message } = req.body;
   if (typeof name !== 'string' || name.trim().length < 2) return res.status(400).json({ message: 'Invalid name' });
   if (!isValidEmail(email)) return res.status(400).json({ message: 'Invalid email' });
   if (typeof message !== 'string' || message.trim().length < 5) return res.status(400).json({ message: 'Invalid message' });
+  if (typeof subject === 'string' && subject.length > 100) return res.status(400).json({ message: 'Subject too long' });
+  if (typeof phone === 'string' && phone.length > 30) return res.status(400).json({ message: 'Phone too long' });
+  if (message.length > 5000) return res.status(400).json({ message: 'Message too long' });
   db.query(
     'INSERT INTO contact_messages (name, email, phone, subject, message) VALUES (?, ?, ?, ?, ?)',
     [name, email, phone, subject, message],
@@ -415,41 +512,248 @@ app.post('/api/contact/send', (req, res) => {
     });
 });
 
-// ==================== ADMIN API (Protected) ====================
-app.get('/api/dashboard/stats', authenticate, (req, res) => {
-  const queries = {
-    totalMembers: 'SELECT COUNT(*) as count FROM members',
-    newThisMonth: 'SELECT COUNT(*) as count FROM members WHERE joined_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)',
-    monthlyDonations: `SELECT SUM(amount) as total FROM transactions WHERE type='income' AND MONTH(transaction_date)=MONTH(CURDATE())`,
-    monthlyExpenses: `SELECT SUM(amount) as total FROM transactions WHERE type='expense' AND MONTH(transaction_date)=MONTH(CURDATE())`,
-    upcomingEvents: `SELECT COUNT(*) as count FROM programs WHERE status='upcoming' AND start_datetime >= NOW()`
-  };
-  const results = {};
-  let completed = 0;
-  const total = Object.keys(queries).length;
-  for (const [key, sql] of Object.entries(queries)) {
-    db.query(sql, (err, rows) => {
-      if (!err) results[key] = rows[0].count || rows[0].total || 0;
-      completed++;
-      if (completed === total) {
-        res.json({
-          totalMembers: results.totalMembers,
-          newMembersThisMonth: results.newThisMonth,
-          monthlyDonations: results.monthlyDonations,
-          monthlyExpenses: results.monthlyExpenses,
-          donationsChange: 12, // calculate properly in production
-          expensesChange: -2,
-          upcomingEvents: results.upcomingEvents
-        });
+// Public: external links (wired from admin settings)
+app.get('/api/public/links', (req, res) => {
+  db.query('SELECT link_key, url FROM external_links', (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    const out = {};
+    for (const r of rows || []) {
+      if (r && r.link_key && typeof r.url === 'string' && r.url.trim()) {
+        out[r.link_key] = r.url.trim();
       }
+    }
+    res.json(out);
+  });
+});
+
+// Admin routes
+app.get('/api/dashboard/stats', authenticate, (req, res) => {
+  const sql = `
+    SELECT
+      (SELECT COUNT(*) FROM members) as totalMembers,
+      (SELECT COUNT(*) FROM members WHERE joined_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')) as newMembersThisMonth,
+      (SELECT COALESCE(SUM(amount),0) FROM transactions
+        WHERE type='income' AND status='completed'
+          AND transaction_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND transaction_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+      ) as monthlyDonations,
+      (SELECT COALESCE(SUM(amount),0) FROM transactions
+        WHERE type='income' AND status='completed'
+          AND transaction_date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+          AND transaction_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+      ) as prevMonthlyDonations,
+      (SELECT COALESCE(SUM(amount),0) FROM transactions
+        WHERE type='expense' AND status='completed'
+          AND transaction_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND transaction_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+      ) as monthlyExpenses,
+      (SELECT COALESCE(SUM(amount),0) FROM transactions
+        WHERE type='expense' AND status='completed'
+          AND transaction_date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+          AND transaction_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+      ) as prevMonthlyExpenses,
+      (SELECT COUNT(*) FROM programs WHERE status='upcoming' AND start_datetime >= NOW()) as upcomingEvents
+  `;
+  db.query(sql, (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    const r = rows && rows[0] ? rows[0] : {};
+    res.json({
+      totalMembers: Number(r.totalMembers || 0),
+      newMembersThisMonth: Number(r.newMembersThisMonth || 0),
+      monthlyDonations: Number(r.monthlyDonations || 0),
+      monthlyExpenses: Number(r.monthlyExpenses || 0),
+      donationsChange: percentChange(r.monthlyDonations, r.prevMonthlyDonations),
+      expensesChange: percentChange(r.monthlyExpenses, r.prevMonthlyExpenses),
+      upcomingEvents: Number(r.upcomingEvents || 0)
+    });
+  });
+});
+
+app.get('/api/dashboard/donation-trends', authenticate, (req, res) => {
+  const months = 6;
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`;
+
+  const sql = `
+    SELECT DATE_FORMAT(transaction_date, '%Y-%m-01') as monthStart, COALESCE(SUM(amount),0) as total
+    FROM transactions
+    WHERE type='income' AND status='completed' AND transaction_date >= ?
+    GROUP BY monthStart
+    ORDER BY monthStart ASC
+  `;
+
+  db.query(sql, [startStr], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    const byMonth = new Map();
+    for (const r of rows || []) {
+      if (r && r.monthStart) byMonth.set(String(r.monthStart).slice(0, 10), Number(r.total || 0));
+    }
+    const labels = [];
+    const values = [];
+    for (let i = 0; i < months; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      labels.push(d.toLocaleString('en-US', { month: 'short' }));
+      values.push(byMonth.get(key) || 0);
+    }
+    res.json({ labels, values });
+  });
+});
+
+// Admin settings: external links (used by public "Watch Online", "Join Our Service", etc.)
+app.get('/api/admin/settings/links', authenticate, (req, res) => {
+  db.query(
+    'SELECT link_key as `key`, label, url, updated_at as updatedAt FROM external_links ORDER BY id ASC',
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.json(rows || []);
+    }
+  );
+});
+
+app.put('/api/admin/settings/links', authenticate, (req, res) => {
+  const links = Array.isArray(req.body?.links) ? req.body.links : null;
+  if (!links) return res.status(400).json({ message: 'Invalid request' });
+
+  const updates = [];
+  for (const l of links) {
+    const key = typeof l?.key === 'string' ? l.key.trim() : '';
+    const url = typeof l?.url === 'string' ? l.url.trim() : '';
+    if (!key) continue;
+    if (url && !isSafeHttpUrl(url)) return res.status(400).json({ message: `Invalid URL for ${key}` });
+    updates.push({ key, url: url || null });
+  }
+  if (updates.length === 0) return res.status(400).json({ message: 'No changes provided' });
+
+  let done = 0;
+  for (const u of updates) {
+    db.query('UPDATE external_links SET url = ? WHERE link_key = ?', [u.url, u.key], (err) => {
+      if (err) return res.status(500).json({ message: err.message });
+      done += 1;
+      if (done === updates.length) res.json({ message: 'Links updated' });
     });
   }
 });
 
-app.get('/api/dashboard/donation-trends', authenticate, (req, res) => {
-  res.json({
-    labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-    values: [2100000, 2800000, 1800000, 3200000, 3800000, 4200000]
+// Admin: contact inbox + replies
+app.get('/api/admin/contact/messages', authenticate, (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = Math.min(50, parseInt(req.query.limit, 10) || 10);
+  const offset = (page - 1) * limit;
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const unreadOnly = String(req.query.unreadOnly || '').toLowerCase() === 'true';
+
+  const whereParts = [];
+  const params = [];
+  if (unreadOnly) whereParts.push('is_read = 0');
+  if (search) {
+    whereParts.push('(name LIKE ? OR email LIKE ? OR subject LIKE ? OR message LIKE ?)');
+    const like = `%${search}%`;
+    params.push(like, like, like, like);
+  }
+  const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+  db.query(
+    `SELECT id, name, email, phone, subject, message, is_read as isRead, created_at as createdAt
+     FROM contact_messages
+     ${whereSql}
+     ORDER BY created_at DESC, id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      db.query(`SELECT COUNT(*) as total FROM contact_messages ${whereSql}`, params, (e, count) => {
+        if (e) return res.status(500).json({ message: e.message });
+        const total = Number(count?.[0]?.total || 0);
+        res.json({
+          items: rows || [],
+          total,
+          page,
+          totalPages: Math.ceil(total / limit),
+          from: total === 0 ? 0 : offset + 1,
+          to: Math.min(offset + limit, total)
+        });
+      });
+    }
+  );
+});
+
+app.put('/api/admin/contact/messages/:id/read', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid message id' });
+  db.query('UPDATE contact_messages SET is_read = 1 WHERE id = ?', [id], (err, result) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Message not found' });
+    res.json({ message: 'Marked as read' });
+  });
+});
+
+app.post('/api/admin/contact/messages/:id/reply', authenticate, rateLimit({ windowMs: 60_000, max: 10, keyPrefix: 'contact-reply' }), (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid message id' });
+  const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim() : '';
+  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+  if (subject.length < 3 || subject.length > 150) return res.status(400).json({ message: 'Invalid subject' });
+  if (message.length < 2 || message.length > 10000) return res.status(400).json({ message: 'Invalid message' });
+
+  db.query('SELECT * FROM contact_messages WHERE id = ? LIMIT 1', [id], async (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    const msg = rows && rows[0] ? rows[0] : null;
+    if (!msg) return res.status(404).json({ message: 'Message not found' });
+
+    db.query('SELECT * FROM church_info LIMIT 1', async (e2, infoRows) => {
+      if (e2) return res.status(500).json({ message: e2.message });
+      const church = infoRows && infoRows[0] ? infoRows[0] : {};
+      const title = subject;
+      const bodyHtml = `
+        <p style="margin:0 0 14px 0;font-size:14px;line-height:1.7;">Hello ${escapeHtml(msg.name)},</p>
+        <p style="margin:0 0 16px 0;font-size:14px;line-height:1.7;">${escapeHtml(message).replace(/\n/g, '<br>')}</p>
+        <div style="margin:18px 0 0 0;padding:14px 14px;border-radius:14px;background:#f5f3ef;">
+          <div style="font-size:12px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#735c00;margin-bottom:8px;">Your original message</div>
+          <div style="font-size:13px;line-height:1.7;color:#1b1c1a;">
+            <div><strong>Subject:</strong> ${escapeHtml(msg.subject || '(no subject)')}</div>
+            <div style="margin-top:8px;">${escapeHtml(msg.message || '').replace(/\n/g, '<br>')}</div>
+          </div>
+        </div>
+        <div style="margin-top:18px;font-size:12px;line-height:1.7;color:#414844;">
+          <div><strong>${escapeHtml(church.name || 'Sacred Hearth')}</strong></div>
+          ${church.address ? `<div>${escapeHtml(church.address).replace(/\n/g, '<br>')}</div>` : ''}
+          ${church.phone ? `<div>Phone: ${escapeHtml(church.phone)}</div>` : ''}
+          ${church.email ? `<div>Email: ${escapeHtml(church.email)}</div>` : ''}
+        </div>
+      `;
+
+      const html = renderBrandedEmail({
+        title,
+        preheader: `Reply from ${church.name || 'Sacred Hearth'}`,
+        bodyHtml,
+        footerNote: `If you didn’t request this or need more help, reply to this email or contact ${church.email || 'the church office'}.`
+      });
+
+      try {
+        await sendAppEmail({
+          to: msg.email,
+          subject,
+          text: `Hello ${msg.name},\n\n${message}\n\n---\nOriginal message:\n${msg.subject || '(no subject)'}\n${msg.message || ''}\n`,
+          html
+        });
+      } catch (sendErr) {
+        console.error('Failed to send contact reply:', sendErr);
+        return res.status(500).json({ message: 'Email sending failed. Check SMTP settings.' });
+      }
+
+      db.query(
+        'INSERT INTO contact_replies (contact_message_id, replied_by, to_email, subject, message) VALUES (?, ?, ?, ?, ?)',
+        [id, req.userId, msg.email, subject, message],
+        (e3) => {
+          if (e3) return res.status(500).json({ message: e3.message });
+          db.query('UPDATE contact_messages SET is_read = 1 WHERE id = ?', [id], () => {
+            res.json({ message: 'Reply sent' });
+          });
+        }
+      );
+    });
   });
 });
 
@@ -563,10 +867,21 @@ app.post('/api/members/:id/avatar', authenticate, upload.single('avatar'), (req,
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
   if (!req.file) return res.status(400).json({ message: 'Avatar image is required' });
   const url = `/uploads/${req.file.filename}`;
-  db.query('UPDATE members SET avatar = ? WHERE id = ?', [url, id], (err, result) => {
-    if (err) return res.status(500).json({ message: err.message });
-    if (result.affectedRows === 0) return res.status(404).json({ message: 'Member not found' });
-    res.json({ message: 'Avatar updated', url });
+  db.query('SELECT avatar FROM members WHERE id = ? LIMIT 1', [id], (e0, rows) => {
+    if (e0) return res.status(500).json({ message: e0.message });
+    const oldUrl = rows && rows[0] ? rows[0].avatar : null;
+    db.query('UPDATE members SET avatar = ? WHERE id = ?', [url, id], (err, result) => {
+      if (err) return res.status(500).json({ message: err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ message: 'Member not found' });
+
+      if (typeof oldUrl === 'string' && oldUrl.startsWith('/uploads/') && oldUrl !== url) {
+        const filename = path.basename(oldUrl);
+        const filePath = path.join(uploadsDir, filename);
+        fs.unlink(filePath, () => {});
+      }
+
+      res.json({ message: 'Avatar updated', url });
+    });
   });
 });
 
@@ -804,17 +1119,59 @@ app.delete('/api/members/:id', authenticate, (req, res) => {
 app.get('/api/finance/summary', authenticate, (req, res) => {
   db.query(
     `SELECT 
-      (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE type='income') - (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE type='expense') as balance,
-      (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE type='income' AND MONTH(transaction_date)=MONTH(CURDATE()) AND YEAR(transaction_date)=YEAR(CURDATE())) as monthlyTithes,
-      (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE type='expense' AND MONTH(transaction_date)=MONTH(CURDATE()) AND YEAR(transaction_date)=YEAR(CURDATE())) as monthlyExpenses
+      (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE type='income' AND status='completed')
+        - (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE type='expense' AND status='completed') as balance,
+      (SELECT COALESCE(SUM(amount),0) FROM transactions
+        WHERE type='income' AND status='completed'
+          AND transaction_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND transaction_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+      ) as monthlyTithes,
+      (SELECT COALESCE(SUM(amount),0) FROM transactions
+        WHERE type='expense' AND status='completed'
+          AND transaction_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND transaction_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+      ) as monthlyExpenses,
+      (SELECT COALESCE(SUM(amount),0) FROM transactions
+        WHERE type='income' AND status='completed'
+          AND transaction_date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+          AND transaction_date < DATE_FORMAT(CURDATE(), '%Y-%m-01')
+      ) as prevMonthlyTithes,
+      (SELECT COALESCE(AVG(month_total),0) FROM (
+        SELECT SUM(amount) as month_total
+        FROM transactions
+        WHERE type='income' AND status='completed'
+          AND transaction_date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 6 MONTH)
+        GROUP BY YEAR(transaction_date), MONTH(transaction_date)
+      ) t) as avgIncome6m,
+      (SELECT COALESCE(AVG(month_total),0) FROM (
+        SELECT SUM(amount) as month_total
+        FROM transactions
+        WHERE type='expense' AND status='completed'
+          AND transaction_date >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 6 MONTH)
+        GROUP BY YEAR(transaction_date), MONTH(transaction_date)
+      ) e) as avgExpense6m
     `,
     (err, rows) => {
       if (err) return res.status(500).json({ message: err.message });
-      const d = rows[0];
-      d.trend = 12.4;
-      d.tithesProgress = 75;
-      d.expenseStatus = 'Within Budget';
-      res.json(d);
+      const d = rows && rows[0] ? rows[0] : {};
+      const monthlyTithes = Number(d.monthlyTithes || 0);
+      const monthlyExpenses = Number(d.monthlyExpenses || 0);
+      const avgIncome6m = Number(d.avgIncome6m || 0);
+      const avgExpense6m = Number(d.avgExpense6m || 0);
+      const progressBase = avgIncome6m > 0 ? avgIncome6m : Math.max(monthlyTithes, 1);
+      const tithesProgress = Math.max(0, Math.min(100, Math.round((monthlyTithes / progressBase) * 100)));
+      const expenseStatus = avgExpense6m > 0
+        ? (monthlyExpenses <= avgExpense6m ? 'Within Budget' : 'Above Budget')
+        : (monthlyExpenses === 0 ? 'Within Budget' : 'Above Budget');
+
+      res.json({
+        balance: Number(d.balance || 0),
+        monthlyTithes,
+        monthlyExpenses,
+        trend: percentChange(monthlyTithes, d.prevMonthlyTithes),
+        tithesProgress,
+        expenseStatus
+      });
     });
 });
 
@@ -844,7 +1201,7 @@ app.get('/api/finance/transactions', authenticate, (req, res) => {
     });
 });
 
-// ==================== ADMIN PROGRAMS CRUD ====================
+// Admin program crud
 app.get('/api/admin/programs', authenticate, (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
@@ -1012,7 +1369,7 @@ app.delete('/api/admin/programs/:id', authenticate, (req, res) => {
   });
 });
 
-// ==================== ADMIN ANNOUNCEMENTS CRUD ====================
+// ADMIN ANNOUNCEMENTS CRUD 
 app.get('/api/admin/announcements', authenticate, (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
@@ -1191,7 +1548,7 @@ app.delete('/api/admin/announcements/:id', authenticate, (req, res) => {
   });
 });
 
-// ==================== ADMIN GALLERY CRUD ====================
+//  ADMIN GALLERY CRUD 
 app.get('/api/admin/gallery', authenticate, (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 12;
@@ -1427,7 +1784,6 @@ app.use('/api', (req, res) => {
 
 // Fallback (pages)
 app.get('*', (req, res) => {
-  // Serve the "empty" error page for unknown routes
   res.status(404).sendFile(path.join(__dirname, 'public', 'pages', 'error', 'empty.html'));
 });
 
