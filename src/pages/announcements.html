@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Sacred Hearth CMS - Announcements Management</title>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#745c00",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface-container-high": "#eae8e4",
+            "primary-fixed": "#b1f0ce",
+            "primary": "#002d1c",
+            "on-primary-fixed-variant": "#0e5138",
+            "on-secondary": "#ffffff",
+            "surface-container-highest": "#e4e2de",
+            "outline": "#717973",
+            "surface": "#fbf9f5",
+            "surface-tint": "#2c694e",
+            "primary-container": "#00452e",
+            "on-surface-variant": "#414844",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "background": "#fbf9f5",
+            "secondary-container": "#fed65b",
+            "error-container": "#ffdad6",
+            "surface-bright": "#fbf9f5",
+            "inverse-on-surface": "#f2f0ed",
+            "error": "#ba1a1a",
+            "surface-container": "#efeeea",
+            "inverse-surface": "#30312e",
+            "primary-fixed-dim": "#95d4b3",
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "surface-dim": "#dbdad6",
+            "tertiary-container": "#7d001f",
+            "on-tertiary-fixed": "#40000b",
+            "tertiary-fixed": "#ffdada",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#95d4b3",
+            "surface-variant": "#e4e2de",
+            "outline-variant": "#c1c8c2",
+            "tertiary": "#540012",
+            "on-secondary-fixed": "#241a00",
+            "on-primary-fixed": "#002114",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-primary-container": "#76b394",
+            "secondary-fixed-dim": "#e9c349",
+            "on-surface": "#1b1c1a",
+            "surface-container-low": "#f5f3ef",
+            "on-tertiary-container": "#ff7f87"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    h1, h2, h3 { font-family: 'Noto Serif', serif; }
+  </style>
+</head>
+
+<body class="bg-surface text-on-surface min-h-screen flex">
+
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low flex flex-col border-r-0 z-50">
+  <div class="px-6 py-8">
+    <h1 class="font-headline text-xl font-black text-primary">Sacred Hearth CMS</h1>
+    <p class="text-xs font-semibold uppercase tracking-wider opacity-60 text-primary mt-1">Okitipupa Parish</p>
+  </div>
+  
+  <nav class="flex-1 overflow-y-auto px-2 space-y-1">
+    <a href="/admin/dashboard" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">dashboard</span>
+      Dashboard
+    </a>
+    <a href="/admin/members" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">group</span>
+      Members
+    </a>
+    <a href="/admin/finance" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">payments</span>
+      Finance
+    </a>
+    <a href="/admin/programs" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">event</span>
+      Programs
+    </a>
+    <a href="/admin/announcements" class="bg-primary text-on-primary rounded-xl mx-2 my-1 px-4 py-3 flex items-center gap-3 font-semibold text-sm shadow-lg">
+      <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">campaign</span>
+      Announcements
+    </a>
+    <a href="/admin/gallery" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">imagesmode</span>
+      Gallery
+    </a>
+    <a href="/admin/reports" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">analytics</span>
+      Reports
+    </a>
+    <a href="/admin/settings" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">settings</span>
+      Settings
+    </a>
+  </nav>
+  
+  <div class="p-4 mt-auto">
+    <button id="new-announcement-sidebar-btn" class="w-full bg-secondary text-on-secondary-fixed font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md hover:opacity-90 transition-opacity">
+      <span class="material-symbols-outlined">add</span>
+      New Record
+    </button>
+    <div class="mt-4 pt-4 border-t border-outline-variant/20">
+      <button id="logout-btn" class="w-full text-primary opacity-70 mx-2 px-4 py-3 flex items-center gap-3 hover:bg-error-container/20 hover:text-error rounded-xl transition-all font-semibold text-sm">
+        <span class="material-symbols-outlined">logout</span>
+        Logout
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="flex-1 ml-64 p-8 min-h-screen">
+  
+  <!-- Header Section -->
+  <header class="flex justify-between items-end mb-12">
+    <div class="max-w-2xl">
+      <h2 class="text-4xl font-headline font-black text-primary leading-tight">Announcements Management</h2>
+      <p class="text-on-surface-variant text-lg mt-2 font-medium">Draft, manage, and broadcast sacred updates to the Okitipupa community.</p>
+    </div>
+    <div class="flex gap-4">
+      <div class="relative">
+        <input id="announcement-search" class="bg-surface-container-highest border-none rounded-xl px-12 py-3 text-sm focus:ring-2 focus:ring-primary w-64 font-medium placeholder:text-on-surface-variant/50" placeholder="Search announcements..." type="text"/>
+        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+      </div>
+      <button id="create-announcement-header-btn" class="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg">
+        <span class="material-symbols-outlined">edit_note</span>
+        Create New
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats Cards Grid (Dynamic) -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-2 border-primary/5">
+      <div class="flex justify-between items-start mb-4">
+        <div class="p-3 bg-primary-fixed text-primary rounded-lg">
+          <span class="material-symbols-outlined">visibility</span>
+        </div>
+        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Active</span>
+      </div>
+      <h3 id="active-announcements-count" class="text-3xl font-headline font-black text-primary">--</h3>
+      <p class="text-sm font-medium text-on-surface-variant mt-1">Published Live</p>
+    </div>
+    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-2 border-secondary/10">
+      <div class="flex justify-between items-start mb-4">
+        <div class="p-3 bg-secondary-fixed text-secondary rounded-lg">
+          <span class="material-symbols-outlined">pending</span>
+        </div>
+        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Drafts</span>
+      </div>
+      <h3 id="draft-announcements-count" class="text-3xl font-headline font-black text-primary">--</h3>
+      <p class="text-sm font-medium text-on-surface-variant mt-1">Pending Review</p>
+    </div>
+    <div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-2 border-tertiary-fixed-dim/20">
+      <div class="flex justify-between items-start mb-4">
+        <div class="p-3 bg-tertiary-fixed text-tertiary rounded-lg">
+          <span class="material-symbols-outlined">schedule</span>
+        </div>
+        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Scheduled</span>
+      </div>
+      <h3 id="scheduled-announcements-count" class="text-3xl font-headline font-black text-primary">--</h3>
+      <p class="text-sm font-medium text-on-surface-variant mt-1">Upcoming</p>
+    </div>
+    <div class="bg-primary text-on-primary p-6 rounded-xl shadow-xl flex flex-col justify-center relative overflow-hidden">
+      <div class="relative z-10">
+        <p class="text-xs font-bold uppercase tracking-widest opacity-60 mb-2">Total Reach</p>
+        <h3 id="total-reach-count" class="text-3xl font-headline font-black">--</h3>
+        <p class="text-sm font-medium opacity-80 mt-1">Community Members</p>
+      </div>
+      <div class="absolute -right-4 -bottom-4 opacity-10">
+        <span class="material-symbols-outlined text-8xl">campaign</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Announcements List Table -->
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-surface-container">
+      <div class="flex justify-between items-center">
+        <h3 class="text-xl font-headline font-bold text-primary">Recent Announcements</h3>
+        <div class="flex gap-2">
+          <button id="filter-announcements-btn" class="p-2 rounded-lg bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors">
+            <span class="material-symbols-outlined">filter_list</span>
+          </button>
+          <button id="sort-announcements-btn" class="p-2 rounded-lg bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-colors">
+            <span class="material-symbols-outlined">sort</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-low">
+            <th class="px-6 py-4 text-sm font-bold text-primary uppercase tracking-wider">Announcement Details</th>
+            <th class="px-6 py-4 text-sm font-bold text-primary uppercase tracking-wider">Category</th>
+            <th class="px-6 py-4 text-sm font-bold text-primary uppercase tracking-wider">Status</th>
+            <th class="px-6 py-4 text-sm font-bold text-primary uppercase tracking-wider">Date</th>
+            <th class="px-6 py-4 text-sm font-bold text-primary uppercase tracking-wider text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="announcements-table-body" class="divide-y divide-surface-container">
+          <!-- JavaScript will inject announcement rows here -->
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="p-6 bg-surface-container-low flex justify-between items-center">
+      <p id="pagination-info" class="text-sm font-medium text-on-surface-variant">Showing <span class="text-primary font-bold">--</span> of -- announcements</p>
+      <div class="flex items-center gap-2" id="pagination-controls">
+        <!-- Pagination buttons rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Action Button -->
+  <button id="fab-create-announcement" class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40">
+    <span class="material-symbols-outlined text-3xl">add</span>
+  </button>
+</main>
+
+<!-- Create/Edit Announcement Modal (Hidden by default) -->
+<div id="announcement-modal" class="hidden fixed inset-0 bg-primary/20 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+  <div class="bg-surface rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col md:flex-row">
+    <!-- Left sidebar steps -->
+    <div class="md:w-1/3 bg-primary p-8 text-on-primary flex flex-col justify-between">
+      <div>
+        <h3 class="text-3xl font-headline font-black mb-4">Draft Your Message</h3>
+        <p class="text-on-primary-container text-sm leading-relaxed">Ensure your announcement follows the parish communication guidelines. Clear, compassionate, and inspiring.</p>
+      </div>
+      <div class="mt-8 space-y-6">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-primary-fixed">1</div>
+          <p class="text-sm font-semibold">Message Details</p>
+        </div>
+        <div class="flex items-center gap-4 opacity-50">
+          <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center">2</div>
+          <p class="text-sm font-semibold">Visual Assets</p>
+        </div>
+        <div class="flex items-center gap-4 opacity-50">
+          <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center">3</div>
+          <p class="text-sm font-semibold">Distribution</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Right form area -->
+    <div class="flex-1 p-8 bg-surface">
+      <div class="flex justify-between items-center mb-8">
+        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">General Information</span>
+        <button id="close-modal-btn" class="text-on-surface-variant hover:text-primary">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      
+      <form id="announcement-form" class="space-y-6">
+        <input type="hidden" id="announcement-id" name="id"/>
+        <div>
+          <label class="block text-sm font-bold text-primary mb-2">Headline</label>
+          <input id="announcement-title" name="title" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium transition-colors" placeholder="Enter announcement title" type="text" required/>
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-primary mb-2">Announcement Body</label>
+          <textarea id="announcement-content" name="content" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium transition-colors resize-none" placeholder="Describe the announcement in detail..." rows="6" required></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-primary mb-2">Category</label>
+            <select id="announcement-category" name="category" class="w-full bg-surface-container-highest border-b-2 border-outline-variant/20 focus:border-primary outline-none px-4 py-3 font-medium">
+              <option value="Festival">Festival</option>
+              <option value="Service Update">Service Update</option>
+              <option value="Community Outreach">Community Outreach</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-primary mb-2">Priority</label>
+            <div class="flex gap-2 p-1 bg-surface-container-highest rounded-lg" id="priority-selector">
+              <button type="button" data-priority="normal" class="priority-btn flex-1 py-2 text-xs font-bold rounded-md bg-surface text-primary shadow-sm">Normal</button>
+              <button type="button" data-priority="high" class="priority-btn flex-1 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface transition-all">High</button>
+              <button type="button" data-priority="urgent" class="priority-btn flex-1 py-2 text-xs font-bold text-on-surface-variant hover:bg-surface transition-all">Urgent</button>
+            </div>
+            <input type="hidden" id="announcement-priority" name="priority" value="normal"/>
+          </div>
+        </div>
+        <div class="mt-12 flex justify-end gap-4">
+          <button type="button" id="save-draft-btn" class="px-6 py-3 rounded-xl font-bold text-primary hover:bg-surface-container transition-colors">Save as Draft</button>
+          <button type="submit" id="publish-announcement-btn" class="px-8 py-3 rounded-xl font-bold bg-primary text-on-primary shadow-lg hover:opacity-90 transition-opacity">Publish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript will be added later (shared) -->
+</body>
+</html>

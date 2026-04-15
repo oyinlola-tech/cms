@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Sacred Hearth CMS - Gallery Management</title>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#745c00",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface-container-high": "#eae8e4",
+            "primary-fixed": "#b1f0ce",
+            "primary": "#002d1c",
+            "on-primary-fixed-variant": "#0e5138",
+            "on-secondary": "#ffffff",
+            "surface-container-highest": "#e4e2de",
+            "outline": "#717973",
+            "surface": "#fbf9f5",
+            "surface-tint": "#2c694e",
+            "primary-container": "#00452e",
+            "on-surface-variant": "#414844",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "background": "#fbf9f5",
+            "secondary-container": "#fed65b",
+            "error-container": "#ffdad6",
+            "surface-bright": "#fbf9f5",
+            "inverse-on-surface": "#f2f0ed",
+            "error": "#ba1a1a",
+            "surface-container": "#efeeea",
+            "inverse-surface": "#30312e",
+            "primary-fixed-dim": "#95d4b3",
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "surface-dim": "#dbdad6",
+            "tertiary-container": "#7d001f",
+            "on-tertiary-fixed": "#40000b",
+            "tertiary-fixed": "#ffdada",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#95d4b3",
+            "surface-variant": "#e4e2de",
+            "outline-variant": "#c1c8c2",
+            "tertiary": "#540012",
+            "on-secondary-fixed": "#241a00",
+            "on-primary-fixed": "#002114",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-primary-container": "#76b394",
+            "secondary-fixed-dim": "#e9c349",
+            "on-surface": "#1b1c1a",
+            "surface-container-low": "#f5f3ef",
+            "on-tertiary-container": "#ff7f87"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    h1, h2, h3 { font-family: 'Noto Serif', serif; }
+  </style>
+</head>
+
+<body class="bg-surface text-on-surface selection:bg-secondary-container selection:text-on-secondary-container">
+
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low flex flex-col z-50">
+  <div class="p-8">
+    <h1 class="font-headline text-xl font-black text-primary">Sacred Hearth CMS</h1>
+    <p class="text-xs font-semibold opacity-60 tracking-wider uppercase mt-1">Okitipupa Parish</p>
+  </div>
+  
+  <nav class="flex-1 px-2 space-y-1 overflow-y-auto">
+    <a href="/admin/dashboard" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">dashboard</span>
+      Dashboard
+    </a>
+    <a href="/admin/members" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">group</span>
+      Members
+    </a>
+    <a href="/admin/finance" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">payments</span>
+      Finance
+    </a>
+    <a href="/admin/programs" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">event</span>
+      Programs
+    </a>
+    <a href="/admin/announcements" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">campaign</span>
+      Announcements
+    </a>
+    <a href="/admin/gallery" class="bg-primary text-on-primary rounded-xl mx-2 my-1 px-4 py-3 flex items-center gap-3 shadow-lg font-semibold text-sm">
+      <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">imagesmode</span>
+      Gallery
+    </a>
+    <a href="/admin/reports" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">analytics</span>
+      Reports
+    </a>
+    <a href="/admin/settings" class="text-primary opacity-70 mx-2 my-1 px-4 py-3 flex items-center gap-3 hover:bg-surface-container-highest rounded-xl transition-all font-semibold text-sm">
+      <span class="material-symbols-outlined">settings</span>
+      Settings
+    </a>
+  </nav>
+  
+  <div class="p-6 mt-auto">
+    <button id="new-gallery-item-btn" class="w-full bg-secondary text-on-secondary py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-bold hover:scale-105 active:scale-95 transition-all">
+      <span class="material-symbols-outlined">add</span>
+      New Record
+    </button>
+    <button id="logout-btn" class="w-full mt-4 text-primary opacity-60 flex items-center gap-3 px-4 py-2 text-sm font-semibold hover:opacity-100">
+      <span class="material-symbols-outlined">logout</span>
+      Logout
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="ml-64 min-h-screen p-10 bg-surface">
+  
+  <!-- Header -->
+  <header class="flex justify-between items-end mb-12">
+    <div>
+      <h2 class="text-4xl font-black text-primary mb-2">Gallery Management</h2>
+      <p class="text-on-surface-variant font-medium">Curate and manage the visual journey of our congregation.</p>
+    </div>
+    <div class="flex gap-4">
+      <button id="bulk-delete-btn" class="bg-surface-container-highest text-primary px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-outline-variant transition-colors">
+        <span class="material-symbols-outlined">delete</span>
+        Bulk Delete
+      </button>
+      <button id="upload-images-btn" class="bg-primary text-on-primary px-8 py-3 rounded-full font-bold flex items-center gap-2 shadow-xl hover:shadow-2xl transition-all">
+        <span class="material-symbols-outlined">cloud_upload</span>
+        Upload Images
+      </button>
+    </div>
+  </header>
+
+  <!-- Upload Zone & Stats -->
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+    <div id="drop-zone" class="md:col-span-1 bg-surface-container-low p-8 rounded-xl border-2 border-dashed border-outline-variant flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-surface-container-high transition-colors">
+      <div class="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container mb-4 group-hover:scale-110 transition-transform">
+        <span class="material-symbols-outlined text-3xl">add_photo_alternate</span>
+      </div>
+      <h3 class="font-bold text-lg text-primary">Drop images here</h3>
+      <p class="text-sm text-on-surface-variant mt-2">JPEG, PNG or TIFF up to 10MB</p>
+      <input type="file" id="file-input" multiple accept="image/jpeg,image/png,image/tiff" class="hidden"/>
+    </div>
+    
+    <div class="md:col-span-2 bg-secondary-container p-8 rounded-xl flex items-center justify-between overflow-hidden relative">
+      <div class="z-10">
+        <h3 class="font-headline text-2xl text-on-secondary-container font-bold mb-1">Storage Usage</h3>
+        <p id="storage-usage-text" class="text-on-secondary-container opacity-80 font-medium">-- of -- assets used</p>
+        <div class="w-64 h-2 bg-on-secondary-container/20 rounded-full mt-4 overflow-hidden">
+          <div id="storage-progress-bar" class="h-full bg-on-secondary-container w-0"></div>
+        </div>
+      </div>
+      <span class="material-symbols-outlined text-9xl absolute -right-4 -bottom-4 opacity-10 text-on-secondary-container">landscape</span>
+    </div>
+  </section>
+
+  <!-- Gallery Grid -->
+  <section class="space-y-6">
+    <div class="flex items-center justify-between mb-8">
+      <h3 class="font-headline text-2xl text-primary">Recent Uploads</h3>
+      <div class="flex items-center bg-surface-container-high rounded-full px-4 py-2 gap-2">
+        <span class="material-symbols-outlined text-on-surface-variant">search</span>
+        <input id="gallery-search" class="bg-transparent border-none focus:ring-0 text-sm font-medium w-48" placeholder="Search captions..." type="text"/>
+      </div>
+    </div>
+
+    <!-- Dynamic Gallery Grid Container -->
+    <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <!-- JavaScript will inject gallery cards here -->
+    </div>
+  </section>
+
+  <!-- Pagination -->
+  <footer class="mt-16 flex items-center justify-between pt-8 border-t border-outline-variant/30">
+    <p id="gallery-pagination-info" class="text-sm font-medium text-on-surface-variant">Showing -- of -- images</p>
+    <div class="flex gap-2" id="gallery-pagination-controls">
+      <!-- Pagination buttons rendered by JS -->
+    </div>
+  </footer>
+</main>
+
+<!-- Edit Caption Modal (Hidden by default) -->
+<div id="edit-image-modal" class="fixed inset-0 z-50 bg-primary/20 backdrop-blur-md flex items-center justify-center p-6 hidden">
+  <div class="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden">
+    <div class="p-8">
+      <div class="flex justify-between items-start mb-6">
+        <h3 class="font-headline text-2xl text-primary">Edit Image Details</h3>
+        <button id="close-edit-modal-btn" class="text-on-surface-variant hover:text-error transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form id="edit-image-form" class="space-y-6">
+        <input type="hidden" id="edit-image-id" name="id"/>
+        <div>
+          <label class="block text-sm font-bold text-primary mb-2" for="edit-caption">Image Caption</label>
+          <input id="edit-caption" name="caption" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant rounded-t-lg p-3 focus:ring-0 focus:border-primary transition-colors font-medium" type="text"/>
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-primary mb-2" for="edit-description">Description</label>
+          <textarea id="edit-description" name="description" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant rounded-t-lg p-3 focus:ring-0 focus:border-primary transition-colors font-medium" rows="4"></textarea>
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="edit-featured" name="featured" class="rounded text-primary focus:ring-primary" type="checkbox"/>
+          <label class="text-sm font-bold text-on-surface-variant" for="edit-featured">Mark as Featured on Homepage</label>
+        </div>
+        <div class="bg-surface-container-low -mx-8 -mb-8 p-6 flex justify-end gap-3 mt-6">
+          <button type="button" id="cancel-edit-btn" class="px-6 py-2 text-on-surface-variant font-bold hover:text-primary transition-colors">Cancel</button>
+          <button type="submit" class="bg-primary text-on-primary px-8 py-2 rounded-full font-bold shadow-lg hover:bg-primary-container transition-all">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript will be added later (shared) -->
+</body>
+</html>
