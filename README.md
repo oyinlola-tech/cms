@@ -28,6 +28,7 @@ It contains:
 .gitignore
 db-init.js
 js/app.js
+lib/utils.js
 package.json
 package-lock.json
 server.js
@@ -36,6 +37,7 @@ SECURITY.md
 
 public/
   index.html
+  favicon.svg
   images/
     default-avatar.svg
     placeholder.svg
@@ -48,6 +50,12 @@ public/
     privacy.html
     terms.html
     give.html
+    error/
+      404.html
+      403.html
+      500.html
+      empty.html
+      offline.html
 
 src/
   index.html
@@ -66,6 +74,8 @@ src/
     settings.html
     details/
       members-details.html
+
+uploads/           # Created at runtime for uploaded images
 ```
 
 ## Features (Current)
@@ -83,6 +93,8 @@ src/
 - Programs: full CRUD (create/edit/delete, search, pagination)
 - Announcements: full CRUD (draft/publish/schedule/archive, search, pagination)
 - Gallery: upload, edit metadata, delete, bulk delete, search, pagination
+- Reports: member statistics, financial trends, engagement metrics
+- Settings: profile management, password change, external links, contact inbox
 
 ## Requirements
 - Node.js 18+ recommended
@@ -130,11 +142,22 @@ Minimum required:
 - `/announcements` – Public announcements
 - `/announcements/:id` – Announcement details
 - `/contact` – Contact page
+- `/privacy` – Privacy policy
+- `/terms` – Terms of service
+- `/give` – Give online
 - `/admin/login` – Admin login
+- `/admin/forgot-password` – Forgot password
+- `/admin/verify-otp` – OTP verification
+- `/admin/reset-password` – Reset password
 - `/admin/dashboard` – Admin dashboard
 - `/admin/members` – Members management
 - `/admin/members/:id` – Member details
 - `/admin/finance` – Finance management
+- `/admin/programs` – Programs management
+- `/admin/announcements` – Announcements management
+- `/admin/gallery` – Gallery management
+- `/admin/reports` – Reports
+- `/admin/settings` – Settings
 
 ## API Quick Reference
 All API routes are under `/api`.
@@ -182,3 +205,8 @@ Admin (requires `Authorization: Bearer <token>`):
 
 ## License
 ISC (see `package.json`).
+
+## Changelog
+
+### v1.0.0 (Current)
+- Initial release with full church management features
