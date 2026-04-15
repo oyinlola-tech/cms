@@ -7,7 +7,7 @@
   'use strict';
 
   // ==================== CONFIGURATION ====================
-  const API_BASE = window.API_BASE_URL || 'http://localhost:3000/api';
+  const API_BASE = window.API_BASE_URL || '/api';
   
   // Auth token management
   let authToken = localStorage.getItem('authToken') || null;
@@ -17,11 +17,14 @@
   
   // Format currency (NGN)
   function formatCurrency(amount) {
+    const numeric = Number(amount);
+    if (!Number.isFinite(numeric)) return '₦0.00';
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
+      currencyDisplay: 'symbol',
       minimumFractionDigits: 2
-    }).format(amount).replace('NGN', '₦');
+    }).format(numeric);
   }
 
   // Format date
@@ -38,6 +41,20 @@
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   }
 
+  function timeAgo(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const diffMs = Date.now() - date.getTime();
+    const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    return `${diffDay}d ago`;
+  }
+
   // Show toast notification
   function showToast(message, type = 'info', duration = 3000) {
     const toast = document.createElement('div');
@@ -49,12 +66,59 @@
     setTimeout(() => toast.remove(), duration);
   }
 
+  function openModal({ title, contentHtml, onSubmit, submitLabel = 'Save' }) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4';
+
+    overlay.innerHTML = `
+      <div class="w-full max-w-xl bg-surface rounded-2xl shadow-2xl overflow-hidden">
+        <div class="px-6 py-5 border-b border-outline-variant/20 flex items-center justify-between">
+          <h3 class="text-lg font-black text-primary">${title}</h3>
+          <button type="button" data-modal-close class="p-2 rounded-lg hover:bg-surface-container-low transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <form class="px-6 py-6 space-y-4" data-modal-form>
+          ${contentHtml}
+          <div class="pt-2 flex justify-end gap-3">
+            <button type="button" data-modal-close class="px-5 py-2 rounded-xl font-bold bg-surface-container-low hover:bg-surface-container transition-colors">Cancel</button>
+            <button type="submit" class="px-5 py-2 rounded-xl font-bold bg-primary text-on-primary hover:opacity-90 transition-opacity">${submitLabel}</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    const close = () => overlay.remove();
+    overlay.querySelectorAll('[data-modal-close]').forEach(btn => btn.addEventListener('click', close));
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
+
+    const form = overlay.querySelector('[data-modal-form]');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (typeof onSubmit === 'function') {
+        await onSubmit(new FormData(form), close);
+      } else {
+        close();
+      }
+    });
+
+    document.body.appendChild(overlay);
+    return { close, overlay, form };
+  }
+
   // API request wrapper
   async function apiRequest(endpoint, options = {}) {
-    const headers = {
-      'Content-Type': 'application/json',
-      ...options.headers
-    };
+    const parseAs = options.parseAs || 'json'; // 'json' | 'text' | 'blob'
+    const headers = { ...(options.headers || {}) };
+
+    const method = (options.method || 'GET').toUpperCase();
+    const body = options.body;
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+    if (!isFormData && method !== 'GET' && method !== 'HEAD' && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
     
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`;
@@ -77,10 +141,20 @@
         throw new Error('Unauthorized');
       }
       
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      const shouldParseJson = parseAs === 'json' && contentType.includes('application/json');
+
+      let data;
+      if (parseAs === 'blob') data = await response.blob();
+      else if (parseAs === 'text') data = await response.text();
+      else if (shouldParseJson) data = await response.json();
+      else data = await response.text();
+
       if (!response.ok) {
-        throw new Error(data.message || 'Request failed');
+        const message = typeof data === 'object' && data && data.message ? data.message : (typeof data === 'string' ? data : 'Request failed');
+        throw new Error(message);
       }
+
       return data;
     } catch (error) {
       console.error('API Error:', error);
@@ -122,6 +196,7 @@
   // ==================== PAGE DETECTION ====================
   
   const path = window.location.pathname;
+  const memberDetailsMatch = path.match(/^\/admin\/members\/(\d+)$/);
   
   // Determine which page we're on
   const pageDetector = {
@@ -136,7 +211,8 @@
     isResetPassword: path === '/admin/reset-password',
     isDashboard: path === '/admin/dashboard' || path === '/src/pages/dashboard.html',
     isMembers: path === '/admin/members' || path === '/src/pages/members.html',
-    isMemberProfile: path.includes('/admin/members/') && path.includes('/profile'),
+    isMemberDetails: Boolean(memberDetailsMatch),
+    memberId: memberDetailsMatch ? memberDetailsMatch[1] : null,
     isFinance: path === '/admin/finance' || path === '/src/pages/finance.html',
     isProgramsAdmin: path === '/admin/programs' || path === '/src/pages/programs.html',
     isAnnouncementsAdmin: path === '/admin/announcements' || path === '/src/pages/announcements.html',
@@ -159,7 +235,7 @@
   async function fetchHomeAnnouncements() {
     try {
       const data = await apiRequest('/announcements?limit=3&status=published');
-      renderHomeAnnouncements(data);
+      renderHomeAnnouncements(data.items || []);
     } catch (error) {
       console.error('Failed to load announcements:', error);
     }
@@ -180,7 +256,7 @@
       <div class="col-span-12 md:col-span-8 bg-surface-container-low rounded-xl overflow-hidden flex flex-col md:flex-row group">
         <div class="md:w-1/2 overflow-hidden">
           <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-               src="${featured.image_url || '/images/placeholder.jpg'}" alt="${featured.title}">
+               src="${featured.image_url || '/images/placeholder.svg'}" alt="${featured.title}">
         </div>
         <div class="md:w-1/2 p-8 flex flex-col justify-center space-y-4">
           <span class="text-secondary font-bold text-xs uppercase tracking-widest">${featured.category || 'Announcement'}</span>
@@ -211,7 +287,7 @@
   async function fetchHomePrograms() {
     try {
       const data = await apiRequest('/programs?limit=3');
-      renderHomePrograms(data);
+      renderHomePrograms(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to load programs:', error);
     }
@@ -278,7 +354,7 @@
   async function fetchHomeGallery() {
     try {
       const data = await apiRequest('/gallery?limit=4');
-      renderHomeGallery(data);
+      renderHomeGallery(data.items || []);
     } catch (error) {
       console.error('Failed to load gallery:', error);
     }
@@ -524,7 +600,7 @@
             <article class="md:col-span-8 group relative overflow-hidden rounded-xl bg-surface-container-lowest editorial-shadow">
               <div class="flex flex-col md:flex-row h-full">
                 <div class="md:w-1/2 overflow-hidden h-64 md:h-full">
-                  <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="${item.image_url || '/images/placeholder.jpg'}" alt="${item.title}">
+                  <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src="${item.image_url || '/images/placeholder.svg'}" alt="${item.title}">
                 </div>
                 <div class="md:w-1/2 p-10 flex flex-col justify-between">
                   <div>
@@ -953,6 +1029,7 @@
           'expense': 'receipt',
           'event': 'event'
         };
+        const createdAt = activity.created_at || activity.createdAt || activity.created || activity.date || null;
         html += `
           <div class="px-8 py-4 flex items-center justify-between hover:bg-surface-container-low transition-colors">
             <div class="flex items-center gap-4">
@@ -964,7 +1041,7 @@
                 <p class="text-xs text-on-surface-variant">${activity.description}</p>
               </div>
             </div>
-            <span class="text-xs text-on-surface-variant font-medium">${activity.timeAgo}</span>
+            <span class="text-xs text-on-surface-variant font-medium">${timeAgo(createdAt)}</span>
           </div>
         `;
       });
@@ -984,9 +1061,9 @@
         <h3 class="text-2xl font-black mb-2">${data.title}</h3>
         <div class="flex items-center gap-2 text-sm text-on-primary-container font-semibold mb-6">
           <span class="material-symbols-outlined text-sm">calendar_today</span>
-          ${formatDate(data.date, { weekday: 'long', month: 'long', day: 'numeric' })}
+          ${data.date ? formatDate(data.date, { weekday: 'long', month: 'long', day: 'numeric' }) : '—'}
         </div>
-        <a href="/admin/programs/${data.id}" class="bg-secondary-fixed text-on-secondary-fixed w-full py-3 rounded-xl font-bold hover:opacity-90 transition-opacity inline-block text-center">
+        <a href="/admin/programs" class="bg-secondary-fixed text-on-secondary-fixed w-full py-3 rounded-xl font-bold hover:opacity-90 transition-opacity inline-block text-center">
           Manage Event
         </a>
       `;
@@ -1026,7 +1103,7 @@
           <tr class="hover:bg-surface-container-low transition-colors">
             <td class="px-6 py-5 flex items-center gap-3">
               <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-fixed">
-                <img class="w-full h-full object-cover" src="${member.avatar || '/images/default-avatar.jpg'}" alt="${member.name}">
+                <img class="w-full h-full object-cover" src="${member.avatar || '/images/default-avatar.svg'}" alt="${member.name}">
               </div>
               <div>
                 <p class="font-bold text-primary">${member.name}</p>
@@ -1133,11 +1210,188 @@
     }
     
     document.getElementById('add-member-btn')?.addEventListener('click', () => {
-      // Open member creation modal
-      alert('Member creation form would open here');
+      openModal({
+        title: 'Add Member',
+        submitLabel: 'Create',
+        contentHtml: `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">First Name</label>
+              <input name="first_name" required class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Last Name</label>
+              <input name="last_name" required class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Email</label>
+              <input name="email" type="email" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Phone</label>
+              <input name="phone" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Department</label>
+              <input name="department" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" placeholder="e.g., Choir" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Member Type</label>
+              <select name="member_type" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20">
+                <option value="adult">Adult</option>
+                <option value="youth">Youth</option>
+                <option value="child">Child</option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-bold text-on-surface-variant">Address</label>
+              <input name="address" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Joined Date</label>
+              <input name="joined_date" type="date" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div class="flex items-center gap-3 mt-6">
+              <input id="baptism_status" name="baptism_status" type="checkbox" class="rounded-md border-outline-variant/40" />
+              <label for="baptism_status" class="text-sm font-semibold text-on-surface-variant">Baptized</label>
+            </div>
+          </div>
+        `,
+        onSubmit: async (formData, close) => {
+          const payload = Object.fromEntries(formData.entries());
+          payload.baptism_status = payload.baptism_status === 'on';
+          try {
+            await apiRequest('/members', { method: 'POST', body: JSON.stringify(payload) });
+            showToast('Member created', 'success');
+            close();
+            currentPage = 1;
+            await loadMembers(1, searchInput?.value || '');
+          } catch (error) {
+            showToast(error.message, 'error');
+          }
+        }
+      });
     });
     
     document.getElementById('logout-btn')?.addEventListener('click', logout);
+  }
+
+  async function initMemberDetails(memberId) {
+    if (!requireAuth()) return;
+    if (!memberId) return;
+
+    try {
+      const data = await apiRequest(`/members/${memberId}/profile`);
+      const member = data.member || {};
+
+      const fullName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'Member';
+      document.getElementById('member-name') && (document.getElementById('member-name').textContent = fullName);
+      document.getElementById('member-email') && (document.getElementById('member-email').textContent = member.email || '—');
+      document.getElementById('member-phone') && (document.getElementById('member-phone').textContent = member.phone || '—');
+      document.getElementById('member-address') && (document.getElementById('member-address').textContent = member.address || '—');
+      document.getElementById('member-birthday') && (document.getElementById('member-birthday').textContent = member.dob ? formatDate(member.dob) : '—');
+      document.getElementById('member-role') && (document.getElementById('member-role').textContent = member.department || member.member_type || 'Member');
+      if (document.getElementById('member-avatar')) {
+        document.getElementById('member-avatar').src = member.avatar || '/images/default-avatar.svg';
+      }
+
+      if (document.getElementById('total-giving-ytd')) {
+        document.getElementById('total-giving-ytd').textContent = formatCurrency(data.givingYtd || 0);
+      }
+      if (document.getElementById('attendance-rate')) {
+        document.getElementById('attendance-rate').textContent = data.attendanceRate == null ? '--%' : `${data.attendanceRate}%`;
+      }
+
+      const txBody = document.getElementById('recent-transactions-body');
+      if (txBody) {
+        const rows = (data.recentTransactions || []).map(tx => `
+          <tr class="hover:bg-surface-container-low transition-colors">
+            <td class="py-4 pr-4 text-sm font-medium text-on-surface-variant">${formatDate(tx.date)}</td>
+            <td class="py-4 pr-4 text-sm font-bold text-primary">${tx.category || '—'}</td>
+            <td class="py-4 pr-4 text-sm font-medium text-on-surface-variant">${tx.method || '—'}</td>
+            <td class="py-4 text-right text-sm font-black text-primary">${formatCurrency(tx.amount)}</td>
+          </tr>
+        `).join('');
+        txBody.innerHTML = rows || '<tr><td class="py-6 text-sm text-on-surface-variant" colspan="4">No transactions yet.</td></tr>';
+      }
+
+      const chips = document.getElementById('attendance-chips');
+      if (chips) {
+        const items = (data.recentAttendance || []).map(a => {
+          const ok = a.status === 'present';
+          const bg = ok ? 'bg-primary-fixed text-on-primary-fixed-variant' : 'bg-surface-container-highest text-on-surface-variant';
+          return `
+            <div class="px-4 py-3 rounded-xl ${bg} flex items-center gap-3">
+              <span class="material-symbols-outlined text-base">${ok ? 'check_circle' : 'cancel'}</span>
+              <div class="text-xs font-bold">
+                <div>${formatDate(a.event_date)}</div>
+                <div class="opacity-70 font-semibold">${a.service_type || 'Service'}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        chips.innerHTML = items || '<p class="text-sm text-on-surface-variant">No attendance records.</p>';
+      }
+
+      document.getElementById('edit-member-btn')?.addEventListener('click', () => {
+        openModal({
+          title: 'Edit Member',
+          submitLabel: 'Update',
+          contentHtml: `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">First Name</label>
+                <input name="first_name" required value="${member.first_name || ''}" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Last Name</label>
+                <input name="last_name" required value="${member.last_name || ''}" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Email</label>
+                <input name="email" type="email" value="${member.email || ''}" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Phone</label>
+                <input name="phone" value="${member.phone || ''}" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-xs font-bold text-on-surface-variant">Address</label>
+                <input name="address" value="${member.address || ''}" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Department</label>
+                <input name="department" value="${member.department || ''}" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-on-surface-variant">Member Type</label>
+                <select name="member_type" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20">
+                  <option value="adult" ${member.member_type === 'adult' ? 'selected' : ''}>Adult</option>
+                  <option value="youth" ${member.member_type === 'youth' ? 'selected' : ''}>Youth</option>
+                  <option value="child" ${member.member_type === 'child' ? 'selected' : ''}>Child</option>
+                </select>
+              </div>
+            </div>
+          `,
+          onSubmit: async (formData, close) => {
+            const payload = Object.fromEntries(formData.entries());
+            try {
+              await apiRequest(`/members/${memberId}`, { method: 'PUT', body: JSON.stringify(payload) });
+              showToast('Member updated', 'success');
+              close();
+              await initMemberDetails(memberId);
+            } catch (error) {
+              showToast(error.message, 'error');
+            }
+          }
+        });
+      });
+
+      document.getElementById('logout-btn')?.addEventListener('click', logout);
+    } catch (error) {
+      console.error('Failed to load member profile:', error);
+      showToast('Failed to load member profile', 'error');
+    }
   }
 
   // ==================== ADMIN FINANCE ====================
@@ -1207,13 +1461,79 @@
     await loadFinanceData();
     
     document.getElementById('add-transaction-btn')?.addEventListener('click', () => {
-      alert('Add transaction modal');
+      openModal({
+        title: 'New Transaction',
+        submitLabel: 'Create',
+        contentHtml: `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Type</label>
+              <select name="type" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20">
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Category</label>
+              <input name="category" required class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" placeholder="e.g., Tithe" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Amount (NGN)</label>
+              <input name="amount" type="number" min="0" step="0.01" required class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Date</label>
+              <input name="transaction_date" type="date" required class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Payment Method</label>
+              <select name="payment_method" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20">
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="mobile">Mobile</option>
+                <option value="card">Card</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Status</label>
+              <select name="status" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20">
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-bold text-on-surface-variant">Description</label>
+              <input name="description" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" placeholder="Optional note" />
+            </div>
+          </div>
+        `,
+        onSubmit: async (formData, close) => {
+          const payload = Object.fromEntries(formData.entries());
+          try {
+            await apiRequest('/finance/transactions', { method: 'POST', body: JSON.stringify(payload) });
+            showToast('Transaction created', 'success');
+            close();
+            await loadFinanceData();
+          } catch (error) {
+            showToast(error.message, 'error');
+          }
+        }
+      });
     });
     
     document.getElementById('export-report-btn')?.addEventListener('click', async () => {
       try {
-        const blob = await apiRequest('/finance/export', { method: 'GET', headers: { Accept: 'application/pdf' } });
-        // Handle download
+        const blob = await apiRequest('/finance/export', { method: 'GET', headers: { Accept: 'text/csv' }, parseAs: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'transactions.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
       } catch (error) {
         showToast('Export failed', 'error');
       }
@@ -1341,6 +1661,7 @@
     // Admin pages
     else if (pageDetector.isDashboard) initDashboard();
     else if (pageDetector.isMembers) initMembers();
+    else if (pageDetector.isMemberDetails) initMemberDetails(pageDetector.memberId);
     else if (pageDetector.isFinance) initFinance();
     else if (pageDetector.isProgramsAdmin) initProgramsAdmin();
     else if (pageDetector.isAnnouncementsAdmin) initAnnouncementsAdmin();
