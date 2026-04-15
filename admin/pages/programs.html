@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Programs Management | The Sacred Hearth</title>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#745c00",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface-container-high": "#eae8e4",
+            "primary-fixed": "#b1f0ce",
+            "primary": "#002d1c",
+            "on-primary-fixed-variant": "#0e5138",
+            "on-secondary": "#ffffff",
+            "surface-container-highest": "#e4e2de",
+            "outline": "#717973",
+            "surface": "#fbf9f5",
+            "surface-tint": "#2c694e",
+            "primary-container": "#00452e",
+            "on-surface-variant": "#414844",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "background": "#fbf9f5",
+            "secondary-container": "#fed65b",
+            "error-container": "#ffdad6",
+            "surface-bright": "#fbf9f5",
+            "inverse-on-surface": "#f2f0ed",
+            "error": "#ba1a1a",
+            "surface-container": "#efeeea",
+            "inverse-surface": "#30312e",
+            "primary-fixed-dim": "#95d4b3",
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "surface-dim": "#dbdad6",
+            "tertiary-container": "#7d001f",
+            "on-tertiary-fixed": "#40000b",
+            "tertiary-fixed": "#ffdada",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#95d4b3",
+            "surface-variant": "#e4e2de",
+            "outline-variant": "#c1c8c2",
+            "tertiary": "#540012",
+            "on-secondary-fixed": "#241a00",
+            "on-primary-fixed": "#002114",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-primary-container": "#76b394",
+            "secondary-fixed-dim": "#e9c349",
+            "on-surface": "#1b1c1a",
+            "surface-container-low": "#f5f3ef",
+            "on-tertiary-container": "#ff7f87"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #fbf9f5;
+      color: #1b1c1a;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .font-serif {
+      font-family: 'Noto Serif', serif;
+    }
+  </style>
+</head>
+
+<body class="bg-surface text-on-background min-h-screen">
+
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low flex flex-col border-r-0">
+  <div class="px-6 py-8">
+    <h1 class="font-serif text-xl font-black text-primary">Sacred Hearth CMS</h1>
+    <p class="text-xs text-on-surface-variant mt-1">Okitipupa Parish</p>
+  </div>
+  
+  <nav class="flex-grow flex flex-col mt-4">
+    <a href="/admin/dashboard" class="text-primary flex items-center mx-2 my-1 px-4 py-3 opacity-70 hover:bg-surface-container-highest transition-all rounded-xl">
+      <span class="material-symbols-outlined mr-3">dashboard</span>
+      <span class="font-semibold text-sm">Dashboard</span>
+    </a>
+    <a href="/admin/members" class="text-primary flex items-center mx-2 my-1 px-4 py-3 opacity-70 hover:bg-surface-container-highest transition-all rounded-xl">
+      <span class="material-symbols-outlined mr-3">group</span>
+      <span class="font-semibold text-sm">Members</span>
+    </a>
+    <a href="/admin/finance" class="text-primary flex items-center mx-2 my-1 px-4 py-3 opacity-70 hover:bg-surface-container-highest transition-all rounded-xl">
+      <span class="material-symbols-outlined mr-3">payments</span>
+      <span class="font-semibold text-sm">Finance</span>
+    </a>
+    <a href="/admin/programs" class="bg-primary text-on-primary flex items-center mx-2 my-1 px-4 py-3 rounded-xl">
+      <span class="material-symbols-outlined mr-3" style="font-variation-settings: 'FILL' 1;">event</span>
+      <span class="font-semibold text-sm">Programs</span>
+    </a>
+    <a href="/admin/announcements" class="text-primary flex items-center mx-2 my-1 px-4 py-3 opacity-70 hover:bg-surface-container-highest transition-all rounded-xl">
+      <span class="material-symbols-outlined mr-3">campaign</span>
+      <span class="font-semibold text-sm">Announcements</span>
+    </a>
+    <a href="/admin/gallery" class="text-primary flex items-center mx-2 my-1 px-4 py-3 opacity-70 hover:bg-surface-container-highest transition-all rounded-xl">
+      <span class="material-symbols-outlined mr-3">imagesmode</span>
+      <span class="font-semibold text-sm">Gallery</span>
+    </a>
+    <a href="/admin/reports" class="text-primary flex items-center mx-2 my-1 px-4 py-3 opacity-70 hover:bg-surface-container-highest transition-all rounded-xl">
+      <span class="material-symbols-outlined mr-3">analytics</span>
+      <span class="font-semibold text-sm">Reports</span>
+    </a>
+    <a href="/admin/settings" class="text-primary flex items-center mx-2 my-1 px-4 py-3 opacity-70 hover:bg-surface-container-highest transition-all rounded-xl">
+      <span class="material-symbols-outlined mr-3">settings</span>
+      <span class="font-semibold text-sm">Settings</span>
+    </a>
+  </nav>
+  
+  <div class="p-4 mt-auto">
+    <button id="new-program-sidebar-btn" class="w-full bg-primary text-on-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+      <span class="material-symbols-outlined">add_circle</span>
+      New Record
+    </button>
+    <button id="logout-btn" class="w-full text-primary flex items-center mt-4 px-4 py-3 opacity-70 hover:bg-surface-container-highest transition-all rounded-xl">
+      <span class="material-symbols-outlined mr-3">logout</span>
+      <span class="font-semibold text-sm">Logout</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content Area -->
+<main class="ml-64 p-8 max-w-7xl">
+  
+  <!-- Header Section -->
+  <header class="flex justify-between items-end mb-12">
+    <div>
+      <h2 class="font-serif text-4xl font-black text-primary tracking-tight">Programs Management</h2>
+      <p class="text-on-surface-variant mt-2 max-w-lg">Manage the liturgical calendar, community outreach, and special events for Okitipupa Parish.</p>
+    </div>
+    <div class="flex gap-4">
+      <div class="relative">
+        <input id="program-search" class="bg-surface-container-high border-none rounded-full px-6 py-3 pl-12 text-sm focus:ring-2 focus:ring-primary w-64 transition-all" placeholder="Search events..." type="text"/>
+        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+      </div>
+      <button id="add-program-header-btn" class="bg-primary text-on-primary px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-all">
+        <span class="material-symbols-outlined">add</span>
+        New Program
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats Overview Cards (Dynamic) -->
+  <div class="grid grid-cols-12 gap-6 mb-12">
+    <!-- Upcoming Major Event Card -->
+    <div class="col-span-12 md:col-span-8 bg-surface-container-low p-8 rounded-xl flex items-center justify-between">
+      <div id="major-event-info">
+        <p class="text-secondary font-bold uppercase tracking-widest text-xs mb-2">Upcoming Major Event</p>
+        <h3 id="major-event-title" class="font-serif text-3xl font-bold text-primary mb-1">--</h3>
+        <p id="major-event-datetime" class="text-on-surface-variant">--</p>
+      </div>
+      <div class="bg-primary text-on-primary p-4 rounded-xl text-center min-w-[100px]">
+        <p class="text-xs opacity-80 uppercase">Days Left</p>
+        <p id="major-event-days-left" class="text-3xl font-black">--</p>
+      </div>
+    </div>
+    <!-- Active Programs Count Card -->
+    <div class="col-span-12 md:col-span-4 bg-secondary-container p-8 rounded-xl">
+      <p class="text-on-secondary-fixed-variant font-bold uppercase tracking-widest text-xs mb-2">Active Programs</p>
+      <div class="flex items-baseline gap-2">
+        <h3 id="active-programs-count" class="text-5xl font-black text-on-secondary-fixed">--</h3>
+        <span class="text-on-secondary-fixed-variant font-semibold">Total</span>
+      </div>
+      <div class="mt-4 flex gap-1">
+        <div class="h-1 flex-1 bg-on-secondary-container opacity-20 rounded-full"></div>
+        <div class="h-1 flex-1 bg-on-secondary-container opacity-20 rounded-full"></div>
+        <div class="h-1 flex-1 bg-on-secondary-container rounded-full"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Programs List Table -->
+  <section class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+    <div class="p-6 flex justify-between items-center border-b border-surface-container">
+      <h4 class="font-serif text-xl font-bold text-primary">All Scheduled Events</h4>
+      <div class="flex gap-2" id="category-filters">
+        <button data-category="all" class="filter-btn px-4 py-2 text-sm font-semibold text-primary hover:bg-surface-container rounded-lg transition-colors bg-surface-container">All</button>
+        <button data-category="Liturgical" class="filter-btn px-4 py-2 text-sm font-semibold text-primary opacity-40 hover:opacity-100 transition-opacity">Liturgical</button>
+        <button data-category="Social" class="filter-btn px-4 py-2 text-sm font-semibold text-primary opacity-40 hover:opacity-100 transition-opacity">Social</button>
+        <button data-category="Outreach" class="filter-btn px-4 py-2 text-sm font-semibold text-primary opacity-40 hover:opacity-100 transition-opacity">Outreach</button>
+      </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-surface-container-low">
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-primary">Event Details</th>
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-primary">Type</th>
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-primary">Schedule</th>
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-primary">Status</th>
+            <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-primary text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="programs-table-body" class="divide-y divide-surface-container">
+          <!-- JavaScript will inject program rows here -->
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="p-6 bg-surface-container-low flex justify-between items-center">
+      <p id="pagination-info" class="text-xs text-on-surface-variant font-medium">Showing -- of -- programs</p>
+      <div class="flex gap-1" id="pagination-controls">
+        <!-- Pagination buttons rendered by JS -->
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- New Program Modal (Hidden by default) -->
+<div id="program-modal" class="fixed inset-0 bg-primary/20 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <div class="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden">
+    <div class="p-8 border-b border-surface-container-high flex justify-between items-start">
+      <div>
+        <h3 class="font-serif text-3xl font-black text-primary">Create New Program</h3>
+        <p class="text-on-surface-variant mt-1">Fill in the details to publish a new event to the congregation.</p>
+      </div>
+      <button id="close-modal-btn" class="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    
+    <form id="program-form" class="p-8 space-y-6">
+      <div class="grid grid-cols-2 gap-6">
+        <div class="col-span-2">
+          <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Program Title</label>
+          <input id="program-title" name="title" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all" placeholder="e.g. Easter Youth Retreat" type="text" required/>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Category</label>
+          <select id="program-category" name="category" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all appearance-none">
+            <option value="Liturgical">Liturgical</option>
+            <option value="Social">Social</option>
+            <option value="Outreach">Outreach</option>
+            <option value="Youth">Youth</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Location</label>
+          <input id="program-location" name="location" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all" placeholder="Main Hall, Okitipupa" type="text"/>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Start Date</label>
+          <input id="program-date" name="date" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all" type="date" required/>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Start Time</label>
+          <input id="program-time" name="time" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all" type="time" required/>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2">Description</label>
+          <textarea id="program-description" name="description" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 px-4 py-3 rounded-t-lg transition-all resize-none" placeholder="Briefly describe the event purpose..." rows="3"></textarea>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 pt-4">
+        <button type="submit" class="flex-1 bg-primary text-on-primary py-4 rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all">
+          Publish Program
+        </button>
+        <button type="button" id="cancel-modal-btn" class="px-8 py-4 text-primary font-bold hover:bg-surface-container-high rounded-xl transition-all">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Floating Action Button (Admin Support) -->
+<button class="fixed bottom-8 right-8 w-16 h-16 bg-secondary-container text-on-secondary-fixed shadow-2xl rounded-full flex items-center justify-center hover:scale-110 active:scale-90 transition-all z-40 group">
+  <span class="material-symbols-outlined text-3xl">help_outline</span>
+  <span class="absolute right-full mr-4 bg-primary text-on-primary px-4 py-2 rounded-lg text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Admin Support</span>
+</button>
+
+<!-- JavaScript will be added later (shared) -->
+</body>
+</html>
