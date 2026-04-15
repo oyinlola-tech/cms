@@ -330,7 +330,6 @@ app.get('/api/dashboard/stats', authenticate, (req, res) => {
 });
 
 app.get('/api/dashboard/donation-trends', authenticate, (req, res) => {
-  // Sample data - replace with real query later
   res.json({
     labels: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
     values: [2100000, 2800000, 1800000, 3200000, 3800000, 4200000]
@@ -457,29 +456,26 @@ app.post('/api/admin/gallery', authenticate, upload.single('image'), (req, res) 
     });
 });
 
-// ==================== SERVE HTML ====================
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/programs', (req, res) => res.sendFile(path.join(__dirname, 'public', 'programs.html')));
-app.get('/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public', 'gallery.html')));
-app.get('/announcements', (req, res) => res.sendFile(path.join(__dirname, 'public', 'announcements.html')));
-app.get('/contact', (req, res) => res.sendFile(path.join(__dirname, 'public', 'contact.html')));
-app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'login.html')));
-app.get('/admin/forgot-password', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'forgot-password.html')));
-app.get('/admin/verify-otp', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'verify-otp.html')));
-app.get('/admin/reset-password', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'reset-password.html')));
-app.get('/admin/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'dashboard.html')));
-app.get('/admin/members', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'members.html')));
-app.get('/admin/finance', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'finance.html')));
-app.get('/admin/programs', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'programs.html')));
-app.get('/admin/announcements', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'announcements.html')));
-app.get('/admin/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'gallery.html')));
-app.get('/admin/reports', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'reports.html')));
-app.get('/admin/settings', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin', 'settings.html')));
+app.get('/programs', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'programs.html')));
+app.get('/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'gallery.html')));
+app.get('/announcements', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'announcements.html')));
+app.get('/contact', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'contact.html')));
+app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'login.html')));
+app.get('/admin/forgot-password', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'forgot-password.html')));
+app.get('/admin/verify-otp', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'verify-otp.html')));
+app.get('/admin/reset-password', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'reset-password.html')));
+app.get('/admin/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'src', 'index.html')));
+app.get('/admin/members', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'members.html')));
+app.get('/admin/finance', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'finance.html')));
+app.get('/admin/programs', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'programs.html')));
+app.get('/admin/announcements', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'announcements.html')));
+app.get('/admin/gallery', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'gallery.html')));
+app.get('/admin/reports', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'reports.html')));
+app.get('/admin/settings', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'settings.html')));
 
 // Fallback
 app.get('*', (req, res) => res.redirect('/'));
-
-// ==================== START SERVER ====================
 initializeDatabase()
   .then((connection) => {
     db = connection; // Assign to global for route handlers
