@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Announcements - The Sacred Hearth</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#745c00",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface-container-high": "#eae8e4",
+            "primary-fixed": "#b1f0ce",
+            "primary": "#002d1c",
+            "on-primary-fixed-variant": "#0e5138",
+            "on-secondary": "#ffffff",
+            "surface-container-highest": "#e4e2de",
+            "outline": "#717973",
+            "surface": "#fbf9f5",
+            "surface-tint": "#2c694e",
+            "primary-container": "#00452e",
+            "on-surface-variant": "#414844",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "background": "#fbf9f5",
+            "secondary-container": "#fed65b",
+            "error-container": "#ffdad6",
+            "surface-bright": "#fbf9f5",
+            "inverse-on-surface": "#f2f0ed",
+            "error": "#ba1a1a",
+            "surface-container": "#efeeea",
+            "inverse-surface": "#30312e",
+            "primary-fixed-dim": "#95d4b3",
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "surface-dim": "#dbdad6",
+            "tertiary-container": "#7d001f",
+            "on-tertiary-fixed": "#40000b",
+            "tertiary-fixed": "#ffdada",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#95d4b3",
+            "surface-variant": "#e4e2de",
+            "outline-variant": "#c1c8c2",
+            "tertiary": "#540012",
+            "on-secondary-fixed": "#241a00",
+            "on-primary-fixed": "#002114",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-primary-container": "#76b394",
+            "secondary-fixed-dim": "#e9c349",
+            "on-surface": "#1b1c1a",
+            "surface-container-low": "#f5f3ef",
+            "on-tertiary-container": "#ff7f87"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .editorial-shadow {
+      box-shadow: 0 30px 60px -12px rgba(0, 45, 28, 0.06);
+    }
+  </style>
+</head>
+
+<body class="bg-surface text-on-surface font-body selection:bg-secondary-container selection:text-on-secondary-container">
+
+<!-- Top Navigation -->
+<header class="bg-[#fbf9f5] sticky top-0 z-50">
+  <nav class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+    <div class="text-2xl font-bold text-[#002d1c] font-headline">The Sacred Hearth</div>
+    <div class="hidden md:flex items-center gap-8 font-['Noto_Serif'] text-lg font-medium">
+      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/">Home</a>
+      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/programs">Programs</a>
+      <a class="text-[#735c00] border-b-2 border-[#735c00] pb-1" href="/announcements">Announcements</a>
+      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/gallery">Gallery</a>
+      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/contact">Contact</a>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="/admin/login" class="bg-primary text-on-primary px-6 py-2.5 rounded-full font-semibold hover:opacity-90 transition-opacity">Login</a>
+    </div>
+  </nav>
+</header>
+
+<main class="max-w-7xl mx-auto px-8 py-12 md:py-20">
+  
+  <!-- Hero Section & Search -->
+  <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+    <div class="max-w-2xl">
+      <span class="text-secondary font-semibold tracking-widest uppercase text-sm mb-4 block">Community Updates</span>
+      <h1 class="text-5xl md:text-6xl font-headline text-primary mb-6 leading-tight">Sacred Announcements</h1>
+      <p class="text-on-surface-variant text-lg leading-relaxed max-w-xl">Stay connected with the heart of Okitipupa. From parish milestones to upcoming spiritual gatherings, find all our community notices here.</p>
+    </div>
+    <div class="w-full md:w-96">
+      <div class="relative">
+        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+        <input id="announcement-search" class="w-full bg-surface-container-highest border-none border-b-2 border-outline-variant/20 focus:border-primary focus:ring-0 rounded-t-xl py-4 pl-12 pr-4 font-body text-on-surface" placeholder="Search notices..." type="text"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories/Filters -->
+  <div class="flex flex-wrap gap-3 mb-12" id="category-filters">
+    <button data-category="all" class="filter-btn active bg-primary text-on-primary px-6 py-2 rounded-full text-sm font-semibold">All Notices</button>
+    <button data-category="Spiritual" class="filter-btn bg-surface-container-low text-on-surface-variant px-6 py-2 rounded-full text-sm font-medium hover:bg-surface-container-high transition-colors">Spiritual</button>
+    <button data-category="Administrative" class="filter-btn bg-surface-container-low text-on-surface-variant px-6 py-2 rounded-full text-sm font-medium hover:bg-surface-container-high transition-colors">Administrative</button>
+    <button data-category="Events" class="filter-btn bg-surface-container-low text-on-surface-variant px-6 py-2 rounded-full text-sm font-medium hover:bg-surface-container-high transition-colors">Events</button>
+    <button data-category="Youth" class="filter-btn bg-surface-container-low text-on-surface-variant px-6 py-2 rounded-full text-sm font-medium hover:bg-surface-container-high transition-colors">Youth</button>
+  </div>
+
+  <!-- Announcements Bento Grid (Dynamic) -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-8" id="announcements-grid">
+    <!-- JavaScript will inject announcements here -->
+  </div>
+
+  <!-- Pagination / Load More -->
+  <div class="mt-20 flex justify-center">
+    <button id="load-more-announcements" class="group flex items-center gap-4 px-10 py-4 bg-surface border border-outline-variant rounded-full font-bold text-primary hover:bg-primary hover:text-white hover:border-primary transition-all duration-300">
+      <span>View Past Announcements</span>
+      <span class="material-symbols-outlined group-hover:translate-y-1 transition-transform">keyboard_arrow_down</span>
+    </button>
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="bg-primary py-16 mt-20">
+  <div class="max-w-7xl mx-auto px-8 flex flex-col items-center gap-8 text-center">
+    <div class="font-headline text-white text-3xl font-bold">The Sacred Hearth</div>
+    <div class="flex flex-wrap justify-center gap-8 text-on-primary/60 text-sm font-label">
+      <a class="hover:text-white transition-opacity" href="/privacy">Privacy Policy</a>
+      <a class="hover:text-white transition-opacity" href="/terms">Terms of Service</a>
+      <a class="hover:text-white transition-opacity" href="/contact">Contact Support</a>
+    </div>
+    <div class="w-full max-w-lg h-px bg-primary-container"></div>
+    <div class="text-on-primary/40 text-sm font-label">
+      © 2026 The Sacred Hearth Okitipupa. All Rights Reserved.
+    </div>
+    <div class="flex gap-6 mt-4">
+      <button class="w-10 h-10 rounded-full border border-primary-container flex items-center justify-center text-on-primary/60 hover:text-secondary hover:border-secondary transition-all">
+        <span class="material-symbols-outlined text-lg">social_leaderboard</span>
+      </button>
+      <button class="w-10 h-10 rounded-full border border-primary-container flex items-center justify-center text-on-primary/60 hover:text-secondary hover:border-secondary transition-all">
+        <span class="material-symbols-outlined text-lg">share</span>
+      </button>
+      <button class="w-10 h-10 rounded-full border border-primary-container flex items-center justify-center text-on-primary/60 hover:text-secondary hover:border-secondary transition-all">
+        <span class="material-symbols-outlined text-lg">mail</span>
+      </button>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
