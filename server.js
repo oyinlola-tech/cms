@@ -530,6 +530,24 @@ app.get('/api/members/stats', authenticate, (req, res) => {
     });
 });
 
+app.get('/api/members/lookup', authenticate, (req, res) => {
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  if (!search || search.length < 2) return res.json([]);
+  const like = `%${search}%`;
+  db.query(
+    `SELECT id, first_name, last_name, email, phone, avatar
+     FROM members
+     WHERE first_name LIKE ? OR last_name LIKE ? OR CONCAT(first_name,' ',last_name) LIKE ?
+     ORDER BY created_at DESC
+     LIMIT 10`,
+    [like, like, like],
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.json(rows.map(r => ({ ...r, name: `${r.first_name} ${r.last_name}` })));
+    }
+  );
+});
+
 app.get('/api/members/:id', authenticate, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
@@ -537,6 +555,18 @@ app.get('/api/members/:id', authenticate, (req, res) => {
     if (err) return res.status(500).json({ message: err.message });
     if (!rows[0]) return res.status(404).json({ message: 'Member not found' });
     res.json(rows[0]);
+  });
+});
+
+app.post('/api/members/:id/avatar', authenticate, upload.single('avatar'), (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
+  if (!req.file) return res.status(400).json({ message: 'Avatar image is required' });
+  const url = `/uploads/${req.file.filename}`;
+  db.query('UPDATE members SET avatar = ? WHERE id = ?', [url, id], (err, result) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Member not found' });
+    res.json({ message: 'Avatar updated', url });
   });
 });
 
@@ -593,6 +623,84 @@ app.get('/api/members/:id/profile', authenticate, (req, res) => {
       finish();
     });
   });
+});
+
+app.get('/api/members/:id/household', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
+
+  db.query(
+    `SELECT
+      fm.relationship,
+      CASE WHEN fm.member_id = ? THEN m2.id ELSE m1.id END as id,
+      CASE WHEN fm.member_id = ? THEN CONCAT(m2.first_name,' ',m2.last_name) ELSE CONCAT(m1.first_name,' ',m1.last_name) END as name,
+      CASE WHEN fm.member_id = ? THEN m2.avatar ELSE m1.avatar END as avatar,
+      CASE WHEN fm.member_id = ? THEN m2.email ELSE m1.email END as email,
+      CASE WHEN fm.member_id = ? THEN m2.phone ELSE m1.phone END as phone,
+      fm.member_id as source_member_id,
+      fm.related_member_id as target_member_id
+    FROM family_members fm
+    JOIN members m1 ON fm.member_id = m1.id
+    JOIN members m2 ON fm.related_member_id = m2.id
+    WHERE fm.member_id = ? OR fm.related_member_id = ?
+    ORDER BY name ASC`,
+    [id, id, id, id, id, id, id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      res.json(rows || []);
+    }
+  );
+});
+
+app.post('/api/members/:id/household', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const relatedId = parseInt(req.body?.related_member_id, 10);
+  const relationship = typeof req.body?.relationship === 'string' ? req.body.relationship.trim() : '';
+  if (!Number.isFinite(id) || !Number.isFinite(relatedId)) return res.status(400).json({ message: 'Invalid member id' });
+  if (id === relatedId) return res.status(400).json({ message: 'Cannot link a member to themselves' });
+  if (!relationship) return res.status(400).json({ message: 'Relationship is required' });
+
+  db.query('SELECT id FROM members WHERE id IN (?, ?)', [id, relatedId], (err, rows) => {
+    if (err) return res.status(500).json({ message: err.message });
+    if (!rows || rows.length < 2) return res.status(404).json({ message: 'Member not found' });
+
+    db.query(
+      `SELECT id FROM family_members
+       WHERE (member_id = ? AND related_member_id = ?) OR (member_id = ? AND related_member_id = ?)
+       LIMIT 1`,
+      [id, relatedId, relatedId, id],
+      (err2, existing) => {
+        if (err2) return res.status(500).json({ message: err2.message });
+        if (existing && existing.length > 0) return res.status(409).json({ message: 'Already linked' });
+
+        db.query(
+          'INSERT INTO family_members (member_id, related_member_id, relationship) VALUES (?, ?, ?)',
+          [id, relatedId, relationship],
+          (err3) => {
+            if (err3) return res.status(500).json({ message: err3.message });
+            res.status(201).json({ message: 'Household link created' });
+          }
+        );
+      }
+    );
+  });
+});
+
+app.delete('/api/members/:id/household/:relatedId', authenticate, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const relatedId = parseInt(req.params.relatedId, 10);
+  if (!Number.isFinite(id) || !Number.isFinite(relatedId)) return res.status(400).json({ message: 'Invalid member id' });
+
+  db.query(
+    `DELETE FROM family_members
+     WHERE (member_id = ? AND related_member_id = ?) OR (member_id = ? AND related_member_id = ?)`,
+    [id, relatedId, relatedId, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: err.message });
+      if (result.affectedRows === 0) return res.status(404).json({ message: 'Link not found' });
+      res.json({ message: 'Link removed' });
+    }
+  );
 });
 
 app.post('/api/members', authenticate, (req, res) => {
@@ -1295,6 +1403,8 @@ app.get('/contact', (req, res) => res.sendFile(path.join(__dirname, 'public', 'p
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'terms.html')));
 app.get('/give', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'give.html')));
+app.get('/error/empty', (req, res) => res.status(404).sendFile(path.join(__dirname, 'public', 'pages', 'error', 'empty.html')));
+app.get('/error/offline', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'error', 'offline.html')));
 app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'login.html')));
 app.get('/admin/forgot-password', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'forgot-password.html')));
 app.get('/admin/verify-otp', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'verify-otp.html')));
@@ -1315,8 +1425,11 @@ app.use('/api', (req, res) => {
   res.status(404).json({ message: 'Not found' });
 });
 
-// Fallback
-app.get('*', (req, res) => res.redirect('/'));
+// Fallback (pages)
+app.get('*', (req, res) => {
+  // Serve the "empty" error page for unknown routes
+  res.status(404).sendFile(path.join(__dirname, 'public', 'pages', 'error', 'empty.html'));
+});
 
 // Error handler (e.g. multer fileFilter errors)
 app.use((err, req, res, next) => {

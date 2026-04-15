@@ -58,12 +58,22 @@
   // Show toast notification
   function showToast(message, type = 'info', duration = 3000) {
     const toast = document.createElement('div');
-    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-3 rounded-xl shadow-lg text-white transition-all ${
-      type === 'success' ? 'bg-green-700' : type === 'error' ? 'bg-error' : 'bg-primary'
-    }`;
-    toast.textContent = message;
+    const bg = type === 'success' ? 'bg-green-700' : type === 'error' ? 'bg-error' : 'bg-primary';
+    const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
+    const ms = type === 'error' ? Math.max(duration, 6000) : duration;
+    toast.className = `fixed bottom-4 right-4 z-50 px-5 py-4 rounded-2xl shadow-2xl text-white transition-all ${bg} max-w-[92vw] w-[420px]`;
+    toast.innerHTML = `
+      <div class="flex items-start gap-3">
+        <span class="material-symbols-outlined text-xl leading-none">${icon}</span>
+        <div class="flex-1 text-sm font-semibold leading-6">${String(message || '')}</div>
+        <button type="button" class="p-1 rounded-lg hover:bg-white/10" aria-label="Close notification">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+    `;
+    toast.querySelector('button')?.addEventListener('click', () => toast.remove());
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), duration);
+    setTimeout(() => toast.remove(), ms);
   }
 
   function openModal({ title, contentHtml, onSubmit, submitLabel = 'Save' }) {
@@ -1417,6 +1427,10 @@
               <label class="text-xs font-bold text-on-surface-variant">Address</label>
               <input name="address" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
             </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-bold text-on-surface-variant">Photo (optional)</label>
+              <input name="avatar" type="file" accept="image/*" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-surface-container-highest file:text-primary file:font-bold" />
+            </div>
             <div>
               <label class="text-xs font-bold text-on-surface-variant">Joined Date</label>
               <input name="joined_date" type="date" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" />
@@ -1428,10 +1442,16 @@
           </div>
         `,
         onSubmit: async (formData, close) => {
-          const payload = Object.fromEntries(formData.entries());
+          const avatarFile = formData.get('avatar');
+          const payload = Object.fromEntries(Array.from(formData.entries()).filter(([k]) => k !== 'avatar'));
           payload.baptism_status = payload.baptism_status === 'on';
           try {
-            await apiRequest('/members', { method: 'POST', body: JSON.stringify(payload) });
+            const created = await apiRequest('/members', { method: 'POST', body: JSON.stringify(payload) });
+            if (avatarFile && avatarFile instanceof File && avatarFile.size > 0) {
+              const fd = new FormData();
+              fd.append('avatar', avatarFile);
+              await apiRequest(`/members/${created.id}/avatar`, { method: 'POST', body: fd });
+            }
             showToast('Member created', 'success');
             close();
             currentPage = 1;
@@ -1463,6 +1483,30 @@
       document.getElementById('member-role') && (document.getElementById('member-role').textContent = member.department || member.member_type || 'Member');
       if (document.getElementById('member-avatar')) {
         document.getElementById('member-avatar').src = member.avatar || '/images/default-avatar.svg';
+      }
+
+      // Avatar upload
+      const avatarBtn = document.getElementById('upload-avatar-btn');
+      if (avatarBtn) {
+        avatarBtn.onclick = () => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.onchange = async () => {
+            const file = input.files && input.files[0] ? input.files[0] : null;
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('avatar', file);
+            try {
+              const r = await apiRequest(`/members/${memberId}/avatar`, { method: 'POST', body: fd });
+              document.getElementById('member-avatar').src = r.url;
+              showToast('Photo updated', 'success');
+            } catch (e) {
+              showToast(e.message, 'error');
+            }
+          };
+          input.click();
+        };
       }
 
       if (document.getElementById('total-giving-ytd')) {
@@ -1502,6 +1546,153 @@
         }).join('');
         chips.innerHTML = items || '<p class="text-sm text-on-surface-variant">No attendance records.</p>';
       }
+
+      // Household links
+      const householdContainer = document.getElementById('household-members');
+      async function loadHousehold() {
+        if (!householdContainer) return;
+        try {
+          const links = await apiRequest(`/members/${memberId}/household`);
+          if (!links || links.length === 0) {
+            householdContainer.innerHTML = '<p class="text-sm text-on-surface-variant">No household members linked.</p>';
+            return;
+          }
+          householdContainer.innerHTML = links.map(l => `
+            <div class="flex items-center justify-between gap-4 p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/10">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-fixed flex-shrink-0">
+                  <img class="w-full h-full object-cover" src="${l.avatar || '/images/default-avatar.svg'}" alt="${l.name}">
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-black text-primary truncate">${l.name}</p>
+                  <p class="text-xs text-on-surface-variant truncate">${l.relationship || 'Household'}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="/admin/members/${l.id}" class="p-2 rounded-lg bg-surface-container-highest hover:bg-surface-container-high transition-colors text-primary" title="View">
+                  <span class="material-symbols-outlined">visibility</span>
+                </a>
+                <button type="button" data-household-remove="${l.id}" class="p-2 rounded-lg bg-error-container/30 hover:bg-error-container transition-colors text-error" title="Unlink">
+                  <span class="material-symbols-outlined">link_off</span>
+                </button>
+              </div>
+            </div>
+          `).join('');
+
+          householdContainer.querySelectorAll('button[data-household-remove]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              const rid = btn.getAttribute('data-household-remove');
+              if (!confirm('Remove this household link?')) return;
+              try {
+                await apiRequest(`/members/${memberId}/household/${rid}`, { method: 'DELETE' });
+                showToast('Link removed', 'success');
+                await loadHousehold();
+              } catch (e) {
+                showToast(e.message, 'error');
+              }
+            });
+          });
+        } catch (e) {
+          householdContainer.innerHTML = '<p class="text-sm text-error">Failed to load household.</p>';
+        }
+      }
+
+      await loadHousehold();
+
+      document.getElementById('link-household-btn')?.addEventListener('click', () => {
+        const { overlay } = openModal({
+          title: 'Link Household Member',
+          submitLabel: 'Link',
+          contentHtml: `
+            <input type="hidden" name="related_member_id" id="related-member-id" value="">
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Search member</label>
+              <input id="household-search" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" placeholder="Type at least 2 letters..." />
+              <div id="household-results" class="mt-3 max-h-56 overflow-auto rounded-xl border border-outline-variant/20 bg-surface-container-lowest"></div>
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant">Relationship</label>
+              <input name="relationship" class="mt-2 w-full rounded-xl bg-surface-container-low border-0 focus:ring-2 focus:ring-primary/20" placeholder="e.g., Spouse, Child, Parent" required />
+            </div>
+            <p id="household-selected" class="text-xs font-bold text-primary hidden"></p>
+          `,
+          onSubmit: async (fd, close) => {
+            const related_member_id = (fd.get('related_member_id') || '').toString();
+            const relationship = (fd.get('relationship') || '').toString();
+            if (!related_member_id) {
+              showToast('Select a member first', 'error');
+              return;
+            }
+            try {
+              await apiRequest(`/members/${memberId}/household`, { method: 'POST', body: JSON.stringify({ related_member_id, relationship }) });
+              showToast('Household link created', 'success');
+              close();
+              await loadHousehold();
+            } catch (e) {
+              showToast(e.message, 'error');
+            }
+          }
+        });
+
+        const input = overlay.querySelector('#household-search');
+        const results = overlay.querySelector('#household-results');
+        const hidden = overlay.querySelector('#related-member-id');
+        const selected = overlay.querySelector('#household-selected');
+
+        const render = (items) => {
+          if (!results) return;
+          if (!items || items.length === 0) {
+            results.innerHTML = '<div class="p-4 text-sm text-on-surface-variant">No matches.</div>';
+            return;
+          }
+          results.innerHTML = items.map(m => `
+            <button type="button" data-pick="${m.id}" class="w-full text-left px-4 py-3 hover:bg-surface-container-low transition-colors flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full overflow-hidden bg-primary-fixed flex-shrink-0">
+                <img class="w-full h-full object-cover" src="${m.avatar || '/images/default-avatar.svg'}" alt="${m.name}">
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm font-black text-primary truncate">${m.name}</div>
+                <div class="text-xs text-on-surface-variant truncate">${m.email || m.phone || ''}</div>
+              </div>
+            </button>
+          `).join('');
+
+          results.querySelectorAll('button[data-pick]').forEach(b => {
+            b.addEventListener('click', () => {
+              const id = b.getAttribute('data-pick');
+              const member = items.find(x => String(x.id) === String(id));
+              hidden.value = id;
+              if (selected && member) {
+                selected.textContent = `Selected: ${member.name}`;
+                selected.classList.remove('hidden');
+              }
+            });
+          });
+        };
+
+        if (results) results.innerHTML = '<div class="p-4 text-sm text-on-surface-variant">Start typing to search.</div>';
+        if (input) {
+          let t;
+          input.addEventListener('input', () => {
+            clearTimeout(t);
+            hidden.value = '';
+            selected?.classList.add('hidden');
+            t = setTimeout(async () => {
+              const q = (input.value || '').trim();
+              if (q.length < 2) {
+                render([]);
+                return;
+              }
+              try {
+                const items = await apiRequest(`/members/lookup?search=${encodeURIComponent(q)}`);
+                render(items);
+              } catch (e) {
+                results.innerHTML = '<div class="p-4 text-sm text-error">Search failed.</div>';
+              }
+            }, 300);
+          });
+        }
+      });
 
       document.getElementById('edit-member-btn')?.addEventListener('click', () => {
         openModal({
