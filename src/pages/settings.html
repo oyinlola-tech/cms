@@ -91,10 +91,7 @@
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     h1, h2, h3 { font-family: 'Noto Serif', serif; }
     
-    .ghost-input {
-      @apply bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all;
-    }
-  </style>
+    </style>
 </head>
 
 <body class="bg-surface text-on-surface min-h-screen flex">
@@ -196,15 +193,15 @@
       <form id="profile-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold text-primary px-1" for="profile-name">Full Name</label>
-          <input id="profile-name" name="name" class="ghost-input bg-surface-container-highest" type="text" value=""/>
+          <input id="profile-name" name="name" class="bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all" type="text" value=""/>
         </div>
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold text-primary px-1" for="profile-email">Email Address</label>
-          <input id="profile-email" name="email" class="ghost-input bg-surface-container-highest" type="email" value=""/>
+          <input id="profile-email" name="email" class="bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all" type="email" value=""/>
         </div>
         <div class="flex flex-col gap-1 md:col-span-2">
           <label class="text-xs font-bold text-primary px-1" for="profile-role">Role Description</label>
-          <input id="profile-role" name="role" class="ghost-input bg-surface-container-highest" type="text" value=""/>
+          <input id="profile-role" name="role" class="bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all" type="text" value=""/>
         </div>
         <div class="md:col-span-2 pt-4">
           <button class="bg-primary text-on-primary px-8 py-3 rounded-full font-bold shadow-lg hover:bg-primary-container transition-all active:scale-95" type="submit">
@@ -248,15 +245,15 @@
       <form id="password-form" class="space-y-4">
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold text-primary px-1" for="current-password">Current Password</label>
-          <input id="current-password" name="current_password" class="ghost-input bg-surface-container-highest" placeholder="••••••••••••" type="password"/>
+          <input id="current-password" name="current_password" class="bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all" placeholder="••••••••••••" type="password"/>
         </div>
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold text-primary px-1" for="new-password">New Password</label>
-          <input id="new-password" name="new_password" class="ghost-input bg-surface-container-highest" placeholder="Min. 12 characters" type="password"/>
+          <input id="new-password" name="new_password" class="bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all" placeholder="Min. 12 characters" type="password"/>
         </div>
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold text-primary px-1" for="confirm-password">Confirm New Password</label>
-          <input id="confirm-password" name="confirm_password" class="ghost-input bg-surface-container-highest" placeholder="Confirm selection" type="password"/>
+          <input id="confirm-password" name="confirm_password" class="bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all" placeholder="Confirm selection" type="password"/>
         </div>
         <div id="password-message" class="text-xs text-error hidden"></div>
         <div class="pt-4">
@@ -311,11 +308,11 @@
       <form id="external-links-form" class="space-y-4">
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold text-primary px-1" for="link-join-service">Join Our Service URL</label>
-          <input id="link-join-service" class="ghost-input bg-surface-container-highest" type="url" placeholder="https://..." autocomplete="off" />
+          <input id="link-join-service" class="bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all" type="url" placeholder="https://..." autocomplete="off" />
         </div>
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold text-primary px-1" for="link-watch-online">Watch Online URL</label>
-          <input id="link-watch-online" class="ghost-input bg-surface-container-highest" type="url" placeholder="https://..." autocomplete="off" />
+          <input id="link-watch-online" class="bg-surface-container-highest border-b border-outline-variant/20 rounded-t-lg px-4 py-3 focus:outline-none focus:border-primary transition-all" type="url" placeholder="https://..." autocomplete="off" />
         </div>
         <div class="pt-2 flex items-center gap-3">
           <button type="submit" class="bg-primary text-on-primary px-8 py-3 rounded-xl font-bold hover:bg-primary-container transition-all active:scale-95">Save Links</button>

@@ -150,9 +150,6 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
-
-  // Pragmatic CSP: compatible with current Tailwind CDN + inline config usage.
-  // XSS is still primarily prevented by output-encoding in the frontend.
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "base-uri 'self'",
