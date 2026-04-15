@@ -146,9 +146,9 @@ function isStrongEnoughPassword(password) {
 
 // Authentication middleware
 const authenticate = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: 'No token provided' });
-  const token = authHeader.split(' ')[1];
+  const authHeader = req.headers.authorization || '';
+  const [scheme, token] = authHeader.split(' ');
+  if (scheme !== 'Bearer' || !token) return res.status(401).json({ message: 'No token provided' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.id;
@@ -180,9 +180,12 @@ app.post('/api/auth/login', rateLimit({ windowMs: 60_000, max: 10, keyPrefix: 'l
 });
 
 app.get('/api/auth/me', authenticate, (req, res) => {
-  db.query('SELECT id, name, email, role, avatar FROM users WHERE id = ?', [req.userId], (err, results) => {
+  db.query('SELECT id, name, email, role, avatar, twofa_enabled as twofaEnabled, last_login as lastLogin, last_ip as lastIp FROM users WHERE id = ?', [req.userId], (err, results) => {
     if (err) return res.status(500).json({ message: err.message });
-    res.json(results[0]);
+    const user = results[0] || null;
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.activeSessions = 1;
+    res.json(user);
   });
 });
 
@@ -252,8 +255,14 @@ app.post('/api/auth/resend-otp', rateLimit({ windowMs: 10 * 60_000, max: 5, keyP
     }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     db.query('UPDATE password_resets SET otp = ?, expires_at = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE email = ? ORDER BY created_at DESC LIMIT 1',
-      [otp, email], async (err2) => {
+      [otp, email], async (err2, updateResult) => {
         if (err2) return res.status(500).json({ message: err2.message });
+        if (!updateResult || updateResult.affectedRows === 0) {
+          db.query(
+            'INSERT INTO password_resets (email, otp, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))',
+            [email, otp]
+          );
+        }
         try {
           await sendOTP(email, otp);
         } catch (emailErr) {
@@ -283,13 +292,13 @@ app.post('/api/auth/change-password', authenticate, async (req, res) => {
 });
 
 app.put('/api/auth/profile', authenticate, (req, res) => {
-  const { name, email, role } = req.body;
+  const { name, email } = req.body;
   if (typeof name !== 'string' || name.trim().length < 2) {
     return res.status(400).json({ message: 'Invalid name' });
   }
   if (!isValidEmail(email)) return res.status(400).json({ message: 'Invalid email' });
-  db.query('UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?',
-    [name, email, role, req.userId], (err) => {
+  db.query('UPDATE users SET name = ?, email = ? WHERE id = ?',
+    [name.trim(), email.trim(), req.userId], (err) => {
       if (err) return res.status(500).json({ message: err.message });
       res.json({ message: 'Profile updated' });
     });
@@ -813,6 +822,7 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 app.get('/programs', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'programs.html')));
 app.get('/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'gallery.html')));
 app.get('/announcements', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'announcements.html')));
+app.get('/announcements/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'announcement-details.html')));
 app.get('/contact', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'contact.html')));
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'privacy.html')));
 app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'terms.html')));
@@ -845,6 +855,15 @@ app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(400).json({ message: err.message || 'Bad request' });
 });
+
+if (!process.env.JWT_SECRET) {
+  console.error('Startup failed: JWT_SECRET is not set.');
+  process.exit(1);
+}
+if (NODE_ENV === 'production' && process.env.JWT_SECRET.length < 32) {
+  console.error('Startup failed: JWT_SECRET must be at least 32 characters in production.');
+  process.exit(1);
+}
 initializeDatabase()
   .then((connection) => {
     db = connection; // Assign to global for route handlers
@@ -854,7 +873,9 @@ initializeDatabase()
       if (NODE_ENV !== 'production') {
         console.log('OTP codes will be shown in console (no real emails sent).');
       }
-      console.log(`Admin login: ${process.env.ADMIN_EMAIL}`);
+      if (NODE_ENV !== 'production') {
+        console.log(`Admin login: ${process.env.ADMIN_EMAIL}`);
+      }
     });
   })
   .catch(err => {

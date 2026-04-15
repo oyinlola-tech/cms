@@ -265,6 +265,10 @@ async function insertDefaultAdmin(connection) {
     return;
   }
 
+  if (adminPassword === 'Admin@1234' || adminPassword.length < 10) {
+    console.warn('WARNING: ADMIN_PASSWORD looks weak/default. Change it before deploying to production.');
+  }
+
   const results = await query(connection, 'SELECT id FROM users WHERE email = ?', [adminEmail]);
   if (results.length === 0) {
     const hashed = await bcrypt.hash(adminPassword, SALT_ROUNDS);

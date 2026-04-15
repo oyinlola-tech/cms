@@ -197,6 +197,7 @@
   
   const path = window.location.pathname;
   const memberDetailsMatch = path.match(/^\/admin\/members\/(\d+)$/);
+  const announcementDetailsMatch = path.match(/^\/announcements\/(\d+)$/);
   
   // Determine which page we're on
   const pageDetector = {
@@ -204,6 +205,8 @@
     isPrograms: path === '/programs' || path === '/public/pages/programs.html',
     isGallery: path === '/gallery' || path === '/public/pages/gallery.html',
     isAnnouncements: path === '/announcements' || path === '/public/pages/announcements.html',
+    isAnnouncementDetails: Boolean(announcementDetailsMatch),
+    announcementId: announcementDetailsMatch ? announcementDetailsMatch[1] : null,
     isContact: path === '/contact' || path === '/public/pages/contact.html',
     isLogin: path === '/admin/login' || path === '/src/auth/login.html',
     isForgotPassword: path === '/admin/forgot-password',
@@ -414,9 +417,11 @@
     let html = '';
     programs.slice(0, 5).forEach(prog => {
       const isHighlighted = prog.is_main_service;
-      const date = new Date(prog.date);
+      const startDate = prog.start_datetime || prog.startDatetime || prog.date;
+      const date = new Date(startDate);
       const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
       const day = date.getDate();
+      const schedule = prog.schedule || formatTime(startDate);
       
       html += `
         <div class="group ${isHighlighted ? 'bg-primary text-on-primary' : 'bg-surface-container-lowest'} p-8 rounded-xl flex flex-col md:flex-row gap-8 transition-all hover:shadow-xl ${isHighlighted ? 'relative overflow-hidden' : ''}">
@@ -429,7 +434,7 @@
             <div class="flex flex-wrap items-center gap-3 mb-2">
               <span class="${isHighlighted ? 'bg-on-primary/20 text-white' : 'bg-primary-container text-on-primary-container'} text-xs font-bold px-3 py-1 rounded-full">${prog.type}</span>
               <span class="${isHighlighted ? 'text-on-primary/70' : 'text-on-surface-variant'} text-sm flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm">schedule</span> ${prog.schedule}
+                <span class="material-symbols-outlined text-sm">schedule</span> ${schedule || '—'}
               </span>
             </div>
             <h3 class="text-2xl font-bold ${isHighlighted ? '' : 'text-primary'} mb-3">${prog.title}</h3>
@@ -465,10 +470,10 @@
     programs.forEach(prog => {
       html += `
         <div class="bg-surface-container-low p-6 rounded-xl group hover:bg-surface-container-high transition-colors">
-          <div class="text-on-surface-variant text-xs font-bold mb-2">${formatDate(prog.date).toUpperCase()}</div>
+          <div class="text-on-surface-variant text-xs font-bold mb-2">${formatDate(prog.start_datetime || prog.startDatetime || prog.date).toUpperCase()}</div>
           <h4 class="text-xl font-bold text-primary mb-2">${prog.title}</h4>
           <p class="text-on-surface-variant text-sm mb-4">${prog.description.substring(0, 80)}...</p>
-          <a href="/programs/${prog.id}" class="text-secondary font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+          <a href="/programs" class="text-secondary font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
             Watch Replay <span class="material-symbols-outlined text-sm">arrow_forward</span>
           </a>
         </div>
@@ -492,13 +497,16 @@
     
     let html = '';
     schedule.forEach(item => {
+      const start = item.start_time || item.startTime || '';
+      const end = item.end_time || item.endTime || '';
+      const time = end ? `${start} - ${end}` : start;
       html += `
         <li class="flex justify-between items-start">
           <div>
-            <span class="font-bold text-primary block">${item.day}</span>
-            <span class="text-sm text-on-surface-variant italic">${item.name}</span>
+            <span class="font-bold text-primary block">${item.day_of_week || item.day || ''}</span>
+            <span class="text-sm text-on-surface-variant italic">${item.program_name || item.name || ''}</span>
           </div>
-          <span class="text-sm font-bold text-secondary">${item.time}</span>
+          <span class="text-sm font-bold text-secondary">${time || '—'}</span>
         </li>
       `;
     });
@@ -671,6 +679,29 @@
           await loadAnnouncements(1, currentCategory, searchInput.value);
         }, 500);
       });
+    }
+  }
+
+  async function initAnnouncementDetails(announcementId) {
+    if (!announcementId) return;
+    try {
+      const data = await apiRequest(`/announcements/${announcementId}`);
+      const titleEl = document.getElementById('announcement-title');
+      const dateEl = document.getElementById('announcement-date');
+      const catEl = document.getElementById('announcement-category');
+      const imgEl = document.getElementById('announcement-image');
+      const summaryEl = document.getElementById('announcement-summary');
+      const contentEl = document.getElementById('announcement-content');
+
+      if (titleEl) titleEl.textContent = data.title || 'Announcement';
+      if (dateEl) dateEl.textContent = data.created_at ? formatDate(data.created_at, { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+      if (catEl) catEl.textContent = data.category || 'General';
+      if (summaryEl) summaryEl.textContent = data.summary || '';
+      if (imgEl) imgEl.src = data.image_url || '/images/placeholder.svg';
+      if (contentEl) contentEl.textContent = data.content || '';
+    } catch (error) {
+      console.error('Failed to load announcement:', error);
+      showToast('Failed to load announcement', 'error');
     }
   }
 
@@ -1431,6 +1462,9 @@
       transactions.forEach(tx => {
         const typeColor = tx.type === 'income' ? 'text-primary' : 'text-tertiary';
         const amountPrefix = tx.type === 'income' ? '' : '- ';
+        const statusClasses = tx.status === 'completed'
+          ? 'bg-primary-fixed text-on-primary-fixed-variant'
+          : 'bg-surface-container-highest text-on-surface-variant';
         html += `
           <tr class="hover:bg-surface-container/50 transition-colors">
             <td class="px-6 py-5 text-sm font-medium text-on-surface-variant">${formatDate(tx.date)}</td>
@@ -1442,7 +1476,7 @@
             </td>
             <td class="px-6 py-5 text-sm font-medium text-on-surface italic">${tx.description}</td>
             <td class="px-6 py-5">
-              <span class="bg-${tx.status === 'completed' ? 'primary-fixed' : 'surface-container-highest'} text-${tx.status === 'completed' ? 'on-primary-fixed-variant' : 'on-surface-variant'} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${tx.status}</span>
+              <span class="${statusClasses} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">${tx.status}</span>
             </td>
             <td class="px-6 py-5 text-right font-black ${typeColor}">${amountPrefix}${formatCurrency(tx.amount)}</td>
           </tr>
@@ -1650,6 +1684,7 @@
     else if (pageDetector.isPrograms) initProgramsPublic();
     else if (pageDetector.isGallery) initGalleryPublic();
     else if (pageDetector.isAnnouncements) initAnnouncementsPublic();
+    else if (pageDetector.isAnnouncementDetails) initAnnouncementDetails(pageDetector.announcementId);
     else if (pageDetector.isContact) initContact();
     
     // Auth pages
