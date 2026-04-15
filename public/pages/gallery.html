@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Gallery - The Sacred Hearth Okitipupa</title>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#745c00",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface-container-high": "#eae8e4",
+            "primary-fixed": "#b1f0ce",
+            "primary": "#002d1c",
+            "on-primary-fixed-variant": "#0e5138",
+            "on-secondary": "#ffffff",
+            "surface-container-highest": "#e4e2de",
+            "outline": "#717973",
+            "surface": "#fbf9f5",
+            "surface-tint": "#2c694e",
+            "primary-container": "#00452e",
+            "on-surface-variant": "#414844",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "background": "#fbf9f5",
+            "secondary-container": "#fed65b",
+            "error-container": "#ffdad6",
+            "surface-bright": "#fbf9f5",
+            "inverse-on-surface": "#f2f0ed",
+            "error": "#ba1a1a",
+            "surface-container": "#efeeea",
+            "inverse-surface": "#30312e",
+            "primary-fixed-dim": "#95d4b3",
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "surface-dim": "#dbdad6",
+            "tertiary-container": "#7d001f",
+            "on-tertiary-fixed": "#40000b",
+            "tertiary-fixed": "#ffdada",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#95d4b3",
+            "surface-variant": "#e4e2de",
+            "outline-variant": "#c1c8c2",
+            "tertiary": "#540012",
+            "on-secondary-fixed": "#241a00",
+            "on-primary-fixed": "#002114",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-primary-container": "#76b394",
+            "secondary-fixed-dim": "#e9c349",
+            "on-surface": "#1b1c1a",
+            "surface-container-low": "#f5f3ef",
+            "on-tertiary-container": "#ff7f87"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    h1, h2, h3 { font-family: 'Noto Serif', serif; }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+
+<body class="bg-surface text-on-surface">
+
+<!-- Top Navigation Bar -->
+<header class="bg-[#fbf9f5] sticky top-0 z-50 transition-colors duration-300">
+  <div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+    <div class="text-2xl font-bold text-[#002d1c] font-['Noto_Serif']">The Sacred Hearth</div>
+    
+    <!-- Desktop Navigation -->
+    <nav class="hidden md:flex gap-8 font-['Noto_Serif'] text-lg font-medium">
+      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/">Home</a>
+      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/programs">Programs</a>
+      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/announcements">Announcements</a>
+      <a class="text-[#735c00] border-b-2 border-[#735c00] pb-1" href="/gallery">Gallery</a>
+      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/contact">Contact</a>
+    </nav>
+    
+    <a href="/admin/login" class="bg-primary text-on-primary px-6 py-2 rounded-full font-semibold hover:opacity-90 active:scale-95 transition-all">
+      Login
+    </a>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 pt-12 pb-24">
+  
+  <!-- Hero Section (Static) -->
+  <div class="mb-16">
+    <h1 class="text-5xl md:text-6xl font-black text-primary mb-6 leading-tight">Visions of our <br/><span class="text-secondary">Community Faith</span></h1>
+    <p class="text-body-lg text-on-surface-variant max-w-2xl leading-relaxed">
+      Capturing the moments of grace, celebration, and fellowship that define Okitipupa Parish. From our weekly liturgy to community outreaches.
+    </p>
+  </div>
+
+  <!-- Bento Grid Gallery (Dynamic) -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-6" id="gallery-grid">
+    <!-- JavaScript will inject gallery items here -->
+  </div>
+
+  <!-- Pagination / Load More -->
+  <div class="mt-20 flex justify-center">
+    <button id="load-more-btn" class="flex items-center gap-2 px-10 py-4 bg-primary text-on-primary rounded-full font-bold text-lg hover:scale-105 transition-transform">
+      Load More Memories
+      <span class="material-symbols-outlined">expand_more</span>
+    </button>
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="bg-[#002d1c] w-full py-12 border-t border-[#00452e] flex flex-col items-center gap-6 px-4 text-center">
+  <div class="font-['Noto_Serif'] text-white text-2xl font-bold">The Sacred Hearth</div>
+  <div class="flex flex-wrap justify-center gap-8">
+    <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity font-['Plus_Jakarta_Sans'] text-sm" href="/privacy">Privacy Policy</a>
+    <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity font-['Plus_Jakarta_Sans'] text-sm" href="/terms">Terms of Service</a>
+    <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity font-['Plus_Jakarta_Sans'] text-sm" href="/give">Give Online</a>
+    <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity font-['Plus_Jakarta_Sans'] text-sm" href="/contact">Contact Support</a>
+  </div>
+  <p class="text-[#fbf9f5] opacity-40 font-['Plus_Jakarta_Sans'] text-sm">
+    © 2026 The Sacred Hearth Okitipupa. All Rights Reserved.
+  </p>
+</footer>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-outline-variant/20 z-50 flex justify-around items-center py-3">
+  <a class="flex flex-col items-center text-primary-container opacity-60" href="/">
+    <span class="material-symbols-outlined">home</span>
+    <span class="text-[10px] font-semibold mt-1">Home</span>
+  </a>
+  <a class="flex flex-col items-center text-primary-container opacity-60" href="/programs">
+    <span class="material-symbols-outlined">event</span>
+    <span class="text-[10px] font-semibold mt-1">Programs</span>
+  </a>
+  <a class="flex flex-col items-center text-secondary" href="/gallery">
+    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">imagesmode</span>
+    <span class="text-[10px] font-semibold mt-1">Gallery</span>
+  </a>
+  <a class="flex flex-col items-center text-primary-container opacity-60" href="/contact">
+    <span class="material-symbols-outlined">mail</span>
+    <span class="text-[10px] font-semibold mt-1">Contact</span>
+  </a>
+</nav>
+
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>The Sacred Hearth - Okitipupa</title>
+  
+  <!-- Tailwind with Original Config -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts (deduplicated) -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind Config (exactly as original) -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#745c00",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface-container-high": "#eae8e4",
+            "primary-fixed": "#b1f0ce",
+            "primary": "#002d1c",
+            "on-primary-fixed-variant": "#0e5138",
+            "on-secondary": "#ffffff",
+            "surface-container-highest": "#e4e2de",
+            "outline": "#717973",
+            "surface": "#fbf9f5",
+            "surface-tint": "#2c694e",
+            "primary-container": "#00452e",
+            "on-surface-variant": "#414844",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "background": "#fbf9f5",
+            "secondary-container": "#fed65b",
+            "error-container": "#ffdad6",
+            "surface-bright": "#fbf9f5",
+            "inverse-on-surface": "#f2f0ed",
+            "error": "#ba1a1a",
+            "surface-container": "#efeeea",
+            "inverse-surface": "#30312e",
+            "primary-fixed-dim": "#95d4b3",
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "surface-dim": "#dbdad6",
+            "tertiary-container": "#7d001f",
+            "on-tertiary-fixed": "#40000b",
+            "tertiary-fixed": "#ffdada",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#95d4b3",
+            "surface-variant": "#e4e2de",
+            "outline-variant": "#c1c8c2",
+            "tertiary": "#540012",
+            "on-secondary-fixed": "#241a00",
+            "on-primary-fixed": "#002114",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-primary-container": "#76b394",
+            "secondary-fixed-dim": "#e9c349",
+            "on-surface": "#1b1c1a",
+            "surface-container-low": "#f5f3ef",
+            "on-tertiary-container": "#ff7f87"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .editorial-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1.5rem;
+    }
+    .glass-panel {
+      background: rgba(44, 105, 78, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+
+<body class="bg-surface text-on-surface font-body selection:bg-secondary-container selection:text-on-secondary-fixed">
+
+<!-- Top Navigation Bar (identical to original) -->
+<header class="bg-[#fbf9f5] dark:bg-[#002d1c] docked full-width top-0 sticky z-50">
+  <div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+    <div class="text-2xl font-bold text-[#002d1c] dark:text-[#fbf9f5] font-['Noto_Serif']">
+      The Sacred Hearth
+    </div>
+    <nav class="hidden md:flex items-center gap-8 font-['Noto_Serif'] text-lg font-medium">
+      <a class="text-[#735c00] border-b-2 border-[#735c00] pb-1 transition-colors duration-300" href="/">Home</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/programs">Programs</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/announcements">Announcements</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/gallery">Gallery</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/contact">Contact</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <a href="/admin/login" class="px-6 py-2 rounded-full font-bold bg-primary text-on-primary hover:opacity-90 transition-all">
+        Login
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Hero Section (static, kept as is) -->
+  <section class="relative min-h-[870px] flex items-center overflow-hidden pt-16">
+    <div class="absolute inset-0 z-0">
+      <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYyfnYDxspmO48XlLctsjfHl_PgcFyFg59RKYDRw-kxxwmwi4Z2P35r-olYTIagigEDetYhWyJ8C7jO3uk19dSjD3GxMylWI3ZOINzu9Lg-6ea7-TgEjaYUO89x-3uzdXBK6kyh0haPKkQAPaocCPPi-OxPSlzcqJOJGL845vGnWm_YnQ8K39dKMJpEQY-4-Ey3wHMAkfCd7U_26msxxt93mHCccX8uJGA7s5BKqBtHKrREBd2mf60F2ftjCyhpu1ytexMHTGP4DI" alt="Stunning aerial view of a majestic church building surrounded by lush tropical greenery in Okitipupa, bathed in warm golden hour sunlight"/>
+      <div class="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/40 to-transparent"></div>
+    </div>
+    <div class="relative z-10 max-w-7xl mx-auto px-8 w-full">
+      <div class="max-w-2xl space-y-6">
+        <span class="inline-block px-4 py-1.5 rounded-full bg-secondary-container text-on-secondary-fixed text-sm font-bold tracking-wider uppercase">
+          Welcome Home
+        </span>
+        <h1 class="font-headline text-5xl md:text-7xl font-black text-on-primary leading-tight">
+          Welcome to <br/>Sacred Hearth <span class="text-secondary-fixed">Okitipupa</span>
+        </h1>
+        <p class="text-lg md:text-xl text-on-primary/80 font-medium max-w-lg">
+          A vibrant community of faith, tradition, and spiritual growth in the heart of Ondo State. Join us as we journey together in His love.
+        </p>
+        <div class="flex flex-wrap gap-4 pt-4">
+          <button class="px-8 py-4 bg-secondary-container text-on-secondary-fixed rounded-xl font-bold text-lg hover:scale-105 transition-transform">
+            Join Our Service
+          </button>
+          <button class="px-8 py-4 glass-panel border border-on-primary/20 text-on-primary rounded-xl font-bold text-lg">
+            Watch Online
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Announcements Section (Dynamic - content removed) -->
+  <section class="py-24 bg-surface px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex justify-between items-end mb-12">
+        <div class="space-y-2">
+          <h2 class="font-headline text-4xl font-bold text-primary">Latest Announcements</h2>
+          <p class="text-on-surface-variant max-w-md">Stay updated with the heartbeat of our parish and upcoming milestones.</p>
+        </div>
+        <a class="text-primary font-bold flex items-center gap-2 hover:underline" href="/announcements">
+          View All News <span class="material-symbols-outlined">arrow_forward</span>
+        </a>
+      </div>
+      
+      <!-- Bento Grid Container (dynamic injection target) -->
+      <div class="editorial-grid" id="announcements-container">
+        <!-- JavaScript will populate this -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Upcoming Programs (Dynamic - content removed) -->
+  <section class="py-24 bg-surface-container-low overflow-hidden">
+    <div class="max-w-7xl mx-auto px-8">
+      <h2 class="font-headline text-4xl font-bold text-primary text-center mb-16 underline decoration-secondary decoration-4 underline-offset-8">Spiritual Programs</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-12 items-start" id="programs-container">
+        <!-- JavaScript will populate this -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Gallery Preview (Dynamic - content removed) -->
+  <section class="py-24 bg-surface">
+    <div class="max-w-7xl mx-auto px-8">
+      <div class="flex items-center gap-8 mb-12">
+        <h2 class="font-headline text-4xl font-bold text-primary whitespace-nowrap">Sacred Moments</h2>
+        <div class="h-px bg-outline-variant/30 w-full"></div>
+      </div>
+      
+      <div class="grid grid-cols-12 gap-4 h-[600px]" id="gallery-preview">
+        <!-- JavaScript will populate this -->
+      </div>
+      
+      <div class="mt-12 flex justify-center">
+        <a href="/gallery" class="px-10 py-4 bg-primary text-on-primary rounded-full font-bold hover:bg-primary-container transition-colors flex items-center gap-3">
+          <span class="material-symbols-outlined">imagesmode</span>
+          Explore Full Gallery
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="bg-[#002d1c] dark:bg-[#001a10] w-full py-12 border-t border-[#00452e]">
+  <div class="flex flex-col items-center gap-8 px-4 text-center max-w-7xl mx-auto">
+    <div class="font-['Noto_Serif'] text-white text-3xl font-black">
+      The Sacred Hearth
+    </div>
+    <div class="flex flex-wrap justify-center gap-8 font-['Plus_Jakarta_Sans'] text-sm">
+      <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/privacy">Privacy Policy</a>
+      <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/terms">Terms of Service</a>
+      <a class="text-[#735c00] underline hover:opacity-100 transition-opacity" href="/give">Give Online</a>
+      <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/contact">Contact Support</a>
+    </div>
+    <div class="space-y-4 max-w-md">
+      <p class="text-[#fbf9f5] opacity-80 text-sm leading-relaxed">
+        Connecting the people of Okitipupa through faith, charity, and community service. 
+        Visit us at 12 Cathedral Way, Okitipupa, Ondo State.
+      </p>
+    </div>
+    <div class="pt-8 border-t border-[#00452e] w-full text-[#fbf9f5] opacity-40 text-xs">
+      © 2026 The Sacred Hearth Okitipupa. All Rights Reserved.
+    </div>
+  </div>
+</footer>
+
+<script src="js/home.js"></script>
+</body>
+</html>

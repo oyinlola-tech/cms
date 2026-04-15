@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Programs - The Sacred Hearth</title>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-container": "#745c00",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface-container-high": "#eae8e4",
+            "primary-fixed": "#b1f0ce",
+            "primary": "#002d1c",
+            "on-primary-fixed-variant": "#0e5138",
+            "on-secondary": "#ffffff",
+            "surface-container-highest": "#e4e2de",
+            "outline": "#717973",
+            "surface": "#fbf9f5",
+            "surface-tint": "#2c694e",
+            "primary-container": "#00452e",
+            "on-surface-variant": "#414844",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "background": "#fbf9f5",
+            "secondary-container": "#fed65b",
+            "error-container": "#ffdad6",
+            "surface-bright": "#fbf9f5",
+            "inverse-on-surface": "#f2f0ed",
+            "error": "#ba1a1a",
+            "surface-container": "#efeeea",
+            "inverse-surface": "#30312e",
+            "primary-fixed-dim": "#95d4b3",
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "surface-dim": "#dbdad6",
+            "tertiary-container": "#7d001f",
+            "on-tertiary-fixed": "#40000b",
+            "tertiary-fixed": "#ffdada",
+            "on-secondary-fixed-variant": "#574500",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#95d4b3",
+            "surface-variant": "#e4e2de",
+            "outline-variant": "#c1c8c2",
+            "tertiary": "#540012",
+            "on-secondary-fixed": "#241a00",
+            "on-primary-fixed": "#002114",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-primary-container": "#76b394",
+            "secondary-fixed-dim": "#e9c349",
+            "on-surface": "#1b1c1a",
+            "surface-container-low": "#f5f3ef",
+            "on-tertiary-container": "#ff7f87"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #fbf9f5;
+    }
+    h1, h2, h3, .font-serif {
+      font-family: 'Noto Serif', serif;
+    }
+  </style>
+</head>
+
+<body class="bg-surface text-on-surface selection:bg-secondary-container selection:text-on-secondary-container">
+
+<!-- Navigation Bar -->
+<header class="bg-[#fbf9f5] dark:bg-[#002d1c] docked full-width top-0 sticky z-50">
+  <nav class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+    <div class="text-2xl font-bold text-[#002d1c] dark:text-[#fbf9f5] font-['Noto_Serif']">
+      The Sacred Hearth
+    </div>
+    <div class="hidden md:flex items-center gap-8 font-['Noto_Serif'] text-lg font-medium">
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/">Home</a>
+      <a class="text-[#735c00] border-b-2 border-[#735c00] pb-1" href="/programs">Programs</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/announcements">Announcements</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/gallery">Gallery</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/contact">Contact</a>
+    </div>
+    <a href="/admin/login" class="bg-primary text-on-primary px-6 py-2 rounded-full font-semibold hover:opacity-90 active:scale-95 transition-all">
+      Login
+    </a>
+  </nav>
+</header>
+
+<main class="max-w-7xl mx-auto px-8 py-16">
+  
+  <!-- Hero Section (Static) -->
+  <section class="mb-20">
+    <div class="flex flex-col md:flex-row gap-12 items-center">
+      <div class="flex-1 space-y-6">
+        <span class="text-secondary font-bold tracking-widest text-sm">FAITH IN ACTION</span>
+        <h1 class="text-6xl font-black text-primary leading-tight">Our Sacred <br/>Gatherings</h1>
+        <p class="text-on-surface-variant text-lg max-w-lg leading-relaxed">
+          Join us as we commune in faith, tradition, and community growth. From our majestic Sunday services to our intimate midweek prayers in Okitipupa.
+        </p>
+      </div>
+      <div class="flex-1 relative">
+        <div class="aspect-[4/3] rounded-[2rem] overflow-hidden rotate-2 bg-surface-container-high shadow-2xl">
+          <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhop0hlRixcwF_BnzaYDFuywpIM9FRLAWcGMDKArHrUC_A2YF-9v4wMbMK4kTcE_Fb-hLYwb8ryea_kk6iFGYXudaF0KwWCzGF1962nt5N7_YuCcxGH13ydMxQ9Tb9BHYzqi2AwQm6EbLSJGhTy74d5IJ3OaDCZlRJhcqpcI1_2Z5MhXFLwIruIiMNAi8zaRvrJ2Znj7noPyNMfZLsaW_4L4oBpMmIfoRofvqhDqVg6RGeCOzsk1_hOPd-am0oML57rXU8bNPjGN8" alt="Church interior with morning light">
+        </div>
+        <div class="absolute -bottom-8 -left-8 aspect-square w-48 rounded-3xl overflow-hidden -rotate-6 border-8 border-surface">
+          <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXgZBrt27O8cj3qBHW2kN4Bt8UKlXbtaajJcG0rAeFF6vzdvI2eWweSM7qeUogcCtPrSnAUHkSe7uIT7r7OVVlJ6lfgCn6i2ISBR4nab6cdJoN8i-8I2mPMiiA6Y4ldAD_TX5mwBMpNH33ypLpernh8cOlfl1M1_lJKS4OHpK-8aJjeQgsquXM4aI5kfrvOnmFmk0oAK3iVxTccZ9qVDxglO5MrlJJS9QclNMKoWlAtP0BppHOH1_Q3NqBhWqSBHpVKcxXV2yAFnM" alt="Prayer hands with cross">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Programs Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+    
+    <!-- Main Content Column -->
+    <div class="lg:col-span-2 space-y-12">
+      
+      <!-- Upcoming Programs Section -->
+      <div>
+        <div class="flex items-center gap-4 mb-6">
+          <div class="h-px flex-1 bg-outline-variant opacity-30"></div>
+          <h2 class="text-3xl font-bold text-primary px-4 italic">Upcoming Gatherings</h2>
+          <div class="h-px flex-1 bg-outline-variant opacity-30"></div>
+        </div>
+        
+        <!-- Upcoming Programs List (Dynamic) -->
+        <div class="space-y-6" id="upcoming-programs-container">
+          <!-- JavaScript will inject program items here -->
+        </div>
+      </div>
+      
+      <!-- Past Highlights Section (Dynamic) -->
+      <div class="pt-8">
+        <h2 class="text-2xl font-bold text-primary mb-8 opacity-60">Past Highlights</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="past-highlights-container">
+          <!-- JavaScript will inject past programs here -->
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="space-y-8">
+      
+      <!-- Weekly Calendar Card (Static for now, can be made dynamic) -->
+      <div class="bg-surface-container-low p-8 rounded-3xl border border-outline-variant/10">
+        <h3 class="text-xl font-bold text-primary mb-6">Weekly Schedule</h3>
+        <ul class="space-y-4" id="weekly-schedule-container">
+          <!-- JavaScript can populate this from recurring programs data -->
+          <li class="flex justify-between items-start">
+            <div>
+              <span class="font-bold text-primary block">Sundays</span>
+              <span class="text-sm text-on-surface-variant italic">Divine Worship</span>
+            </div>
+            <span class="text-sm font-bold text-secondary">8:00 AM & 10:30 AM</span>
+          </li>
+          <li class="flex justify-between items-start">
+            <div>
+              <span class="font-bold text-primary block">Wednesdays</span>
+              <span class="text-sm text-on-surface-variant italic">Prayer Hour</span>
+            </div>
+            <span class="text-sm font-bold text-secondary">5:00 PM</span>
+          </li>
+          <li class="flex justify-between items-start">
+            <div>
+              <span class="font-bold text-primary block">Fridays</span>
+              <span class="text-sm text-on-surface-variant italic">Vigil (Monthly)</span>
+            </div>
+            <span class="text-sm font-bold text-secondary">10:00 PM</span>
+          </li>
+        </ul>
+      </div>
+      
+      <!-- Support Card (Static) -->
+      <div class="bg-secondary-container p-8 rounded-3xl relative overflow-hidden group">
+        <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-[8rem]">volunteer_activism</span>
+        </div>
+        <h3 class="text-xl font-bold text-on-secondary-container mb-4">Support Our Work</h3>
+        <p class="text-on-secondary-container/80 text-sm mb-6 leading-relaxed">
+          Your contributions help us keep these programs free and accessible to all members of our community.
+        </p>
+        <a href="/give" class="block w-full bg-primary text-on-primary py-4 rounded-xl font-bold text-center hover:shadow-lg active:scale-95 transition-all">
+          Give Online
+        </a>
+      </div>
+      
+      <!-- Location Map Placeholder (Static) -->
+      <div class="rounded-3xl overflow-hidden bg-surface-container-high aspect-square">
+        <div class="p-4 bg-white/50 backdrop-blur-sm">
+          <h4 class="font-bold text-primary text-sm flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">location_on</span> Okitipupa Parish
+          </h4>
+        </div>
+        <div class="w-full h-full bg-surface-variant flex items-center justify-center">
+          <img class="w-full h-full object-cover grayscale opacity-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIINQpgRRaMj8azAg4OOmqNMhjGIdJf5pSTB5VwvnYhHLcH-6XPiVi-eR-IcXO2CWC_wxntJUZtGAKIw1g4X711ePDvEs2ohbfV6CcNI9wHlnMxYhrZyQS_MxwoP4c0XlBOylkRUDpnZhrOVkmXXyTsRV7brF80VvRL4204WGUUuk3b8HFXNhOPghnaIjFPTXO8guY-aSCK-Ds56NRyHf8mUXves_SGV_zMU_77qzjWAn-VyuWXRjh2J1ZTeUtwy-ZByjvqf8vJwE" alt="Map of Okitipupa area">
+        </div>
+      </div>
+      
+    </div>
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="bg-[#002d1c] dark:bg-[#001a10] w-full py-12 flex flex-col items-center gap-6 px-4 text-center">
+  <div class="font-['Noto_Serif'] text-white text-2xl font-bold">
+    The Sacred Hearth
+  </div>
+  <div class="flex flex-wrap justify-center gap-8 font-['Plus_Jakarta_Sans'] text-sm">
+    <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/privacy">Privacy Policy</a>
+    <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/terms">Terms of Service</a>
+    <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/give">Give Online</a>
+    <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/contact">Contact Support</a>
+  </div>
+  <div class="text-[#fbf9f5] opacity-60 font-['Plus_Jakarta_Sans'] text-sm">
+    © 2026 The Sacred Hearth Okitipupa. All Rights Reserved.
+  </div>
+</footer>
+<script src="js/programs.js"></script>
+</body>
+</html>
