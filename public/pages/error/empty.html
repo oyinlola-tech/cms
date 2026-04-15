@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>The Sacred Hearth - Digital Sanctuary</title>
+  
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  
+  <!-- Tailwind Config -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary-fixed-variant": "#8e0f28",
+            "on-surface-variant": "#414844",
+            "outline-variant": "#c1c8c2",
+            "inverse-on-surface": "#f2f0ed",
+            "tertiary": "#540012",
+            "surface-container-low": "#f5f3ef",
+            "surface-tint": "#2c694e",
+            "background": "#fbf9f5",
+            "surface-container": "#efeeea",
+            "surface-variant": "#e4e2de",
+            "secondary-fixed-dim": "#e9c349",
+            "on-secondary-fixed-variant": "#574500",
+            "on-secondary-fixed": "#241a00",
+            "surface-container-high": "#eae8e4",
+            "on-primary": "#ffffff",
+            "surface-dim": "#dbdad6",
+            "surface-bright": "#fbf9f5",
+            "on-primary-fixed": "#002114",
+            "on-error": "#ffffff",
+            "on-background": "#1b1c1a",
+            "tertiary-container": "#7d001f",
+            "on-primary-fixed-variant": "#0e5138",
+            "inverse-surface": "#30312e",
+            "outline": "#717973",
+            "on-primary-container": "#76b394",
+            "on-secondary": "#ffffff",
+            "on-surface": "#1b1c1a",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed-dim": "#ffb3b5",
+            "surface": "#fbf9f5",
+            "on-error-container": "#93000a",
+            "secondary-container": "#fed65b",
+            "primary-container": "#00452e",
+            "tertiary-fixed": "#ffdada",
+            "primary-fixed-dim": "#95d4b3",
+            "surface-container-highest": "#e4e2de",
+            "surface-container-lowest": "#ffffff",
+            "primary": "#002d1c",
+            "on-tertiary-fixed": "#40000b",
+            "on-secondary-container": "#745c00",
+            "inverse-primary": "#95d4b3",
+            "secondary-fixed": "#ffe088",
+            "secondary": "#735c00",
+            "on-tertiary-container": "#ff7f87",
+            "error-container": "#ffdad6",
+            "primary-fixed": "#b1f0ce",
+            "error": "#ba1a1a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Noto Serif"],
+            "body": ["Plus Jakarta Sans"],
+            "label": ["Plus Jakarta Sans"]
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #fbf9f5;
+    }
+    .serif-text {
+      font-family: 'Noto Serif', serif;
+    }
+    .glass-effect {
+      background: rgba(44, 105, 78, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+
+<body class="flex flex-col min-h-screen">
+
+<!-- Top Navigation Bar (matching platform) -->
+<header class="bg-[#fbf9f5] dark:bg-[#002d1c] w-full top-0 sticky z-50 border-b border-surface-variant/50">
+  <div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+    <div class="text-2xl font-bold text-[#002d1c] dark:text-[#fbf9f5] font-['Noto_Serif']">
+      The Sacred Hearth
+    </div>
+    <nav class="hidden md:flex items-center gap-8 font-['Noto_Serif'] text-lg font-medium">
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/">Home</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/programs">Programs</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/announcements">Announcements</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/gallery">Gallery</a>
+      <a class="text-[#002d1c] dark:text-[#fbf9f5] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/contact">Contact</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <a href="/admin/login" class="px-6 py-2 rounded-full font-bold bg-primary text-on-primary hover:opacity-90 transition-all">
+        Login
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-1 flex flex-col min-w-0">
+  <div class="flex-1 flex flex-col items-center justify-center p-8 max-w-7xl mx-auto w-full py-24">
+    <div class="w-full relative">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <!-- Text Side -->
+        <div class="lg:col-span-7 z-10 text-left">
+          <span class="inline-block py-1 px-3 bg-secondary-container/30 text-on-secondary-container text-xs font-bold rounded-full mb-4 uppercase tracking-widest">Search Results</span>
+          <h2 class="serif-text text-4xl md:text-5xl lg:text-7xl text-primary font-bold leading-tight mb-6">
+            A quiet space... <br/>
+            <span class="text-secondary opacity-80">no records found here yet.</span>
+          </h2>
+          <p class="text-on-surface-variant text-lg max-w-xl mb-10 leading-relaxed font-body">
+            Our sanctuary's digital logs are awaiting your touch. The search criteria didn't yield any results this time. Perhaps a broader search or a new record is needed to fill this garden?
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <button onclick="window.history.back()" class="bg-primary text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-3 hover:opacity-90 shadow-xl shadow-primary/10 transition-all">
+              <span class="material-symbols-outlined">add_circle</span>
+              Add New Record
+            </button>
+            <button onclick="window.location.href=window.location.pathname" class="bg-surface-container-high text-primary px-8 py-4 rounded-xl font-bold text-lg hover:bg-surface-container-highest transition-all flex items-center gap-2">
+              <span class="material-symbols-outlined">filter_list_off</span>
+              Clear Search
+            </button>
+          </div>
+          <!-- Helpful Suggestions -->
+          <div class="mt-16 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="p-6 bg-surface-container-low rounded-xl border-l-4 border-secondary/40">
+              <span class="material-symbols-outlined text-secondary mb-3">lightbulb</span>
+              <h4 class="font-bold text-primary mb-1">Check Spelling</h4>
+              <p class="text-sm text-on-surface-variant">Verify names or dates for any small typos that might hide the records.</p>
+            </div>
+            <div class="p-6 bg-surface-container-low rounded-xl border-l-4 border-primary/20">
+              <span class="material-symbols-outlined text-primary mb-3">calendar_month</span>
+              <h4 class="font-bold text-primary mb-1">Time Range</h4>
+              <p class="text-sm text-on-surface-variant">Broaden your date filters to see records from different parish quarters.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Decorative/Imagery Side -->
+        <div class="lg:col-span-5 relative hidden lg:block">
+          <div class="absolute -top-12 -right-12 w-64 h-64 bg-secondary-container/20 rounded-full blur-3xl"></div>
+          <div class="absolute -bottom-8 -left-8 w-48 h-48 bg-primary/10 rounded-full blur-2xl"></div>
+          <div class="relative z-0 rounded-3xl overflow-hidden shadow-2xl rotate-2 aspect-[4/5]">
+            <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8VLWsPPjmRk-yUZKeC5WrIunfVdRsfZm3pd8HoCa7A83fLdbBUO_-K5oQuBcg92k1ZUej9chDPf6pJbr-i_ExGbfZ-2Mdbbzd-CvbUKn-uIgew354wJwhwK7rc8BgaQcvzl6noJFnOG-CY6u-NfscN5JrqkG8mNidaWo4aUdJiCUDs9_ddVYKVEjlHRd4WYwzQngjhbTGJcVFIBKajATfPzmuVW08m_cpol3SrNh31W5W4mundNncOqNhKWc-Glvw6MEfli63D-I" alt="Empty church interior">
+            <div class="absolute bottom-6 left-6 right-6 p-6 glass-effect rounded-2xl border border-white/20">
+              <p class="serif-text italic text-primary/80 text-sm">"Where two or three are gathered in my name, there am I among them."</p>
+            </div>
+          </div>
+          <div class="absolute -bottom-10 -right-6 bg-white p-4 rounded-2xl shadow-xl z-20 flex items-center gap-4 border border-surface-container">
+            <div class="w-12 h-12 bg-secondary-container rounded-full flex items-center justify-center">
+              <span class="material-symbols-outlined text-on-secondary-container">search_off</span>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-primary">Status</p>
+              <p class="text-xs text-on-surface-variant">Zero matches</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Footer (matching platform) -->
+<footer class="bg-[#002d1c] dark:bg-[#001a10] w-full py-16 border-t border-[#00452e]">
+  <div class="flex flex-col items-center gap-8 px-8 text-center max-w-7xl mx-auto">
+    <div class="font-['Noto_Serif'] text-white text-3xl font-black">
+      The Sacred Hearth
+    </div>
+    <div class="flex flex-wrap justify-center gap-8 font-['Plus_Jakarta_Sans'] text-sm">
+      <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/privacy">Privacy Policy</a>
+      <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/terms">Terms of Service</a>
+      <a class="text-[#735c00] underline hover:opacity-100 transition-opacity" href="/give">Give Online</a>
+      <a class="text-[#fbf9f5] opacity-60 hover:opacity-100 transition-opacity" href="/contact">Contact Support</a>
+    </div>
+    <div class="space-y-4 max-w-md">
+      <p class="text-[#fbf9f5] opacity-80 text-sm leading-relaxed">
+        Connecting the people of Okitipupa through faith, charity, and community service. 
+        Visit us at 12 Cathedral Way, Okitipupa, Ondo State.
+      </p>
+    </div>
+    <div class="pt-8 border-t border-[#00452e] w-full text-[#fbf9f5] opacity-40 text-xs">
+      © 2026 The Sacred Hearth Okitipupa. All Rights Reserved.
+    </div>
+  </div>
+</footer>
+
+<!-- Floating Action Button (Mobile) -->
+<button onclick="window.history.back()" class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all md:hidden z-50">
+  <span class="material-symbols-outlined">add</span>
+</button>
+
+</body>
+</html>
