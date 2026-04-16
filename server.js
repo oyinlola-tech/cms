@@ -270,7 +270,7 @@ app.post('/api/auth/login', rateLimit({ windowMs: 60_000, max: 10, keyPrefix: 'l
   });
 });
 
-app.get('/api/auth/me', authenticate, (req, res) => {
+app.get('/api/auth/me', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'auth-me' }), (req, res) => {
   db.query('SELECT id, name, email, role, avatar, twofa_enabled as twofaEnabled, last_login as lastLogin, last_ip as lastIp FROM users WHERE id = ?', [req.userId], (err, results) => {
     if (err) return res.status(500).json({ message: err.message });
     const user = results[0] || null;
@@ -364,7 +364,7 @@ app.post('/api/auth/resend-otp', rateLimit({ windowMs: 10 * 60_000, max: 5, keyP
   });
 });
 
-app.post('/api/auth/change-password', authenticate, async (req, res) => {
+app.post('/api/auth/change-password', authenticate, rateLimit({ windowMs: 5 * 60_000, max: 5, keyPrefix: 'change-password' }), async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (typeof currentPassword !== 'string' || !isStrongEnoughPassword(newPassword)) {
     return res.status(400).json({ message: 'Invalid request' });
@@ -382,7 +382,7 @@ app.post('/api/auth/change-password', authenticate, async (req, res) => {
   });
 });
 
-app.put('/api/auth/profile', authenticate, (req, res) => {
+app.put('/api/auth/profile', authenticate, rateLimit({ windowMs: 60_000, max: 20, keyPrefix: 'profile-update' }), (req, res) => {
   const { name, email } = req.body;
   if (typeof name !== 'string' || name.trim().length < 2) {
     return res.status(400).json({ message: 'Invalid name' });
@@ -782,7 +782,7 @@ app.get('/api/dashboard/upcoming-event', authenticate, (req, res) => {
   );
 });
 
-app.get('/api/members', authenticate, (req, res) => {
+app.get('/api/members', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'members-list' }), (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -831,7 +831,7 @@ app.get('/api/members/stats', authenticate, (req, res) => {
     });
 });
 
-app.get('/api/members/lookup', authenticate, (req, res) => {
+app.get('/api/members/lookup', authenticate, rateLimit({ windowMs: 60_000, max: 30, keyPrefix: 'members-lookup' }), (req, res) => {
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
   if (!search || search.length < 2) return res.json([]);
   const like = `%${search}%`;
@@ -849,7 +849,7 @@ app.get('/api/members/lookup', authenticate, (req, res) => {
   );
 });
 
-app.get('/api/members/:id', authenticate, (req, res) => {
+app.get('/api/members/:id', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'member-get' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
   db.query('SELECT * FROM members WHERE id = ?', [id], (err, rows) => {
@@ -859,7 +859,7 @@ app.get('/api/members/:id', authenticate, (req, res) => {
   });
 });
 
-app.post('/api/members/:id/avatar', authenticate, upload.single('avatar'), (req, res) => {
+app.post('/api/members/:id/avatar', authenticate, rateLimit({ windowMs: 60_000, max: 5, keyPrefix: 'avatar-upload' }), upload.single('avatar'), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
   if (!req.file) return res.status(400).json({ message: 'Avatar image is required' });
@@ -882,7 +882,7 @@ app.post('/api/members/:id/avatar', authenticate, upload.single('avatar'), (req,
   });
 });
 
-app.get('/api/members/:id/profile', authenticate, (req, res) => {
+app.get('/api/members/:id/profile', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'member-profile' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
 
@@ -937,7 +937,7 @@ app.get('/api/members/:id/profile', authenticate, (req, res) => {
   });
 });
 
-app.get('/api/members/:id/household', authenticate, (req, res) => {
+app.get('/api/members/:id/household', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'member-household' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
 
@@ -1015,7 +1015,7 @@ app.delete('/api/members/:id/household/:relatedId', authenticate, (req, res) => 
   );
 });
 
-app.post('/api/members', authenticate, (req, res) => {
+app.post('/api/members', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 10, keyPrefix: 'member-create' }), (req, res) => {
   const {
     first_name,
     last_name,
@@ -1070,7 +1070,7 @@ app.post('/api/members', authenticate, (req, res) => {
   );
 });
 
-app.put('/api/members/:id', authenticate, (req, res) => {
+app.put('/api/members/:id', authenticate, rateLimit({ windowMs: 60_000, max: 20, keyPrefix: 'member-update' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid member id' });
 
@@ -1106,14 +1106,14 @@ app.put('/api/members/:id', authenticate, (req, res) => {
   });
 });
 
-app.delete('/api/members/:id', authenticate, (req, res) => {
+app.delete('/api/members/:id', authenticate, rateLimit({ windowMs: 60_000, max: 20, keyPrefix: 'member-delete' }), (req, res) => {
   db.query('DELETE FROM members WHERE id = ?', [req.params.id], (err) => {
     if (err) return res.status(500).json({ message: err.message });
     res.json({ message: 'Member deleted' });
   });
 });
 
-app.get('/api/finance/summary', authenticate, (req, res) => {
+app.get('/api/finance/summary', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'finance-summary' }), (req, res) => {
   db.query(
     `SELECT 
       (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE type='income' AND status='completed')
@@ -1172,7 +1172,7 @@ app.get('/api/finance/summary', authenticate, (req, res) => {
     });
 });
 
-app.get('/api/finance/transactions', authenticate, (req, res) => {
+app.get('/api/finance/transactions', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'transactions-list' }), (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
