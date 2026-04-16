@@ -396,7 +396,7 @@ app.put('/api/auth/profile', authenticate, rateLimit({ windowMs: 60_000, max: 20
 });
 
 //Public
-app.get('/api/announcements', (req, res) => {
+app.get('/api/announcements', rateLimit({ windowMs: 60_000, max: 200, keyPrefix: 'public-announcements' }), (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const page = parseInt(req.query.page) || 1;
   const offset = (page - 1) * limit;
@@ -435,7 +435,7 @@ app.get('/api/announcements', (req, res) => {
     });
 });
 
-app.get('/api/announcements/:id', (req, res) => {
+app.get('/api/announcements/:id', rateLimit({ windowMs: 60_000, max: 200, keyPrefix: 'public-announcement' }), (req, res) => {
   db.query('SELECT * FROM announcements WHERE id = ?', [req.params.id], (err, results) => {
     if (err) return res.status(500).json({ message: err.message });
     if (results.length === 0) return res.status(404).json({ message: 'Not found' });
@@ -443,7 +443,7 @@ app.get('/api/announcements/:id', (req, res) => {
   });
 });
 
-app.get('/api/programs', (req, res) => {
+app.get('/api/programs', rateLimit({ windowMs: 60_000, max: 200, keyPrefix: 'public-programs' }), (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const rawStatus = req.query.status || 'upcoming';
   const status = rawStatus === 'past' ? 'completed' : rawStatus;
@@ -456,14 +456,14 @@ app.get('/api/programs', (req, res) => {
     });
 });
 
-app.get('/api/programs/weekly-schedule', (req, res) => {
+app.get('/api/programs/weekly-schedule', rateLimit({ windowMs: 60_000, max: 200, keyPrefix: 'public-schedule' }), (req, res) => {
   db.query('SELECT * FROM weekly_schedule ORDER BY display_order', (err, results) => {
     if (err) return res.status(500).json({ message: err.message });
     res.json(results);
   });
 });
 
-app.get('/api/gallery', (req, res) => {
+app.get('/api/gallery', rateLimit({ windowMs: 60_000, max: 200, keyPrefix: 'public-gallery' }), (req, res) => {
   const limit = parseInt(req.query.limit) || 12;
   const page = parseInt(req.query.page) || 1;
   const offset = (page - 1) * limit;
@@ -485,7 +485,7 @@ app.get('/api/gallery', (req, res) => {
     });
 });
 
-app.get('/api/church/info', (req, res) => {
+app.get('/api/church/info', rateLimit({ windowMs: 60_000, max: 200, keyPrefix: 'public-church' }), (req, res) => {
   db.query('SELECT * FROM church_info LIMIT 1', (err, results) => {
     if (err) return res.status(500).json({ message: err.message });
     res.json(results[0] || {});
@@ -510,7 +510,7 @@ app.post('/api/contact/send', rateLimit({ windowMs: 10 * 60_000, max: 10, keyPre
 });
 
 // Public: external links (wired from admin settings)
-app.get('/api/public/links', (req, res) => {
+app.get('/api/public/links', rateLimit({ windowMs: 60_000, max: 200, keyPrefix: 'public-links' }), (req, res) => {
   db.query('SELECT link_key, url FROM external_links', (err, rows) => {
     if (err) return res.status(500).json({ message: err.message });
     const out = {};
@@ -524,7 +524,7 @@ app.get('/api/public/links', (req, res) => {
 });
 
 // Admin routes
-app.get('/api/dashboard/stats', authenticate, (req, res) => {
+app.get('/api/dashboard/stats', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'dashboard-stats' }), (req, res) => {
   const sql = `
     SELECT
       (SELECT COUNT(*) FROM members) as totalMembers,
@@ -566,7 +566,7 @@ app.get('/api/dashboard/stats', authenticate, (req, res) => {
   });
 });
 
-app.get('/api/dashboard/donation-trends', authenticate, (req, res) => {
+app.get('/api/dashboard/donation-trends', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'donation-trends' }), (req, res) => {
   const months = 6;
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
@@ -599,7 +599,7 @@ app.get('/api/dashboard/donation-trends', authenticate, (req, res) => {
 });
 
 // Admin settings: external links (used by public "Watch Online", "Join Our Service", etc.)
-app.get('/api/admin/settings/links', authenticate, (req, res) => {
+app.get('/api/admin/settings/links', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'settings-links' }), (req, res) => {
   db.query(
     'SELECT link_key as `key`, label, url, updated_at as updatedAt FROM external_links ORDER BY id ASC',
     (err, rows) => {
@@ -609,7 +609,7 @@ app.get('/api/admin/settings/links', authenticate, (req, res) => {
   );
 });
 
-app.put('/api/admin/settings/links', authenticate, (req, res) => {
+app.put('/api/admin/settings/links', authenticate, rateLimit({ windowMs: 60_000, max: 10, keyPrefix: 'settings-links-update' }), (req, res) => {
   const links = Array.isArray(req.body?.links) ? req.body.links : null;
   if (!links) return res.status(400).json({ message: 'Invalid request' });
 
@@ -634,7 +634,7 @@ app.put('/api/admin/settings/links', authenticate, (req, res) => {
 });
 
 // Admin: contact inbox + replies
-app.get('/api/admin/contact/messages', authenticate, (req, res) => {
+app.get('/api/admin/contact/messages', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'contact-messages' }), (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = Math.min(50, parseInt(req.query.limit, 10) || 10);
   const offset = (page - 1) * limit;
@@ -676,7 +676,7 @@ app.get('/api/admin/contact/messages', authenticate, (req, res) => {
   );
 });
 
-app.put('/api/admin/contact/messages/:id/read', authenticate, (req, res) => {
+app.put('/api/admin/contact/messages/:id/read', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'contact-mark-read' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid message id' });
   db.query('UPDATE contact_messages SET is_read = 1 WHERE id = ?', [id], (err, result) => {
@@ -754,7 +754,7 @@ app.post('/api/admin/contact/messages/:id/reply', authenticate, rateLimit({ wind
   });
 });
 
-app.get('/api/dashboard/recent-activity', authenticate, (req, res) => {
+app.get('/api/dashboard/recent-activity', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'recent-activity' }), (req, res) => {
   db.query(
     `(SELECT 'member_joined' as type, CONCAT(first_name,' ',last_name) as title, 'Joined the parish' as description, created_at FROM members)
      UNION ALL
@@ -768,7 +768,7 @@ app.get('/api/dashboard/recent-activity', authenticate, (req, res) => {
     });
 });
 
-app.get('/api/dashboard/upcoming-event', authenticate, (req, res) => {
+app.get('/api/dashboard/upcoming-event', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'upcoming-event' }), (req, res) => {
   db.query(
     `SELECT id, title, start_datetime FROM programs
      WHERE status = 'upcoming' AND start_datetime >= NOW()
@@ -964,7 +964,7 @@ app.get('/api/members/:id/household', authenticate, rateLimit({ windowMs: 60_000
   );
 });
 
-app.post('/api/members/:id/household', authenticate, (req, res) => {
+app.post('/api/members/:id/household', authenticate, rateLimit({ windowMs: 60_000, max: 20, keyPrefix: 'household-create' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   const relatedId = parseInt(req.body?.related_member_id, 10);
   const relationship = typeof req.body?.relationship === 'string' ? req.body.relationship.trim() : '';
@@ -998,7 +998,7 @@ app.post('/api/members/:id/household', authenticate, (req, res) => {
   });
 });
 
-app.delete('/api/members/:id/household/:relatedId', authenticate, (req, res) => {
+app.delete('/api/members/:id/household/:relatedId', authenticate, rateLimit({ windowMs: 60_000, max: 20, keyPrefix: 'household-delete' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   const relatedId = parseInt(req.params.relatedId, 10);
   if (!Number.isFinite(id) || !Number.isFinite(relatedId)) return res.status(400).json({ message: 'Invalid member id' });
@@ -1199,7 +1199,7 @@ app.get('/api/finance/transactions', authenticate, rateLimit({ windowMs: 60_000,
 });
 
 // Admin program crud
-app.get('/api/admin/programs', authenticate, (req, res) => {
+app.get('/api/admin/programs', authenticate, rateLimit({ windowMs: 60_000, max: 120, keyPrefix: 'admin-programs' }), (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -1265,7 +1265,7 @@ app.get('/api/admin/programs/stats', authenticate, (req, res) => {
   );
 });
 
-app.get('/api/admin/programs/:id', authenticate, (req, res) => {
+app.get('/api/admin/programs/:id', authenticate, rateLimit({ windowMs: 60_000, max: 120, keyPrefix: 'admin-program' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid program id' });
   db.query('SELECT * FROM programs WHERE id = ?', [id], (err, rows) => {
@@ -1275,7 +1275,7 @@ app.get('/api/admin/programs/:id', authenticate, (req, res) => {
   });
 });
 
-app.post('/api/admin/programs', authenticate, (req, res) => {
+app.post('/api/admin/programs', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 10, keyPrefix: 'program-create' }), (req, res) => {
   const {
     title,
     description,
@@ -1323,7 +1323,7 @@ app.post('/api/admin/programs', authenticate, (req, res) => {
   );
 });
 
-app.put('/api/admin/programs/:id', authenticate, (req, res) => {
+app.put('/api/admin/programs/:id', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 20, keyPrefix: 'program-update' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid program id' });
 
@@ -1356,7 +1356,7 @@ app.put('/api/admin/programs/:id', authenticate, (req, res) => {
   });
 });
 
-app.delete('/api/admin/programs/:id', authenticate, (req, res) => {
+app.delete('/api/admin/programs/:id', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 20, keyPrefix: 'program-delete' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid program id' });
   db.query('DELETE FROM programs WHERE id = ?', [id], (err, result) => {
@@ -1367,7 +1367,7 @@ app.delete('/api/admin/programs/:id', authenticate, (req, res) => {
 });
 
 // ADMIN ANNOUNCEMENTS CRUD 
-app.get('/api/admin/announcements', authenticate, (req, res) => {
+app.get('/api/admin/announcements', authenticate, rateLimit({ windowMs: 60_000, max: 120, keyPrefix: 'admin-announcements' }), (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -1433,7 +1433,7 @@ app.get('/api/admin/announcements/stats', authenticate, (req, res) => {
   );
 });
 
-app.get('/api/admin/announcements/:id', authenticate, (req, res) => {
+app.get('/api/admin/announcements/:id', authenticate, rateLimit({ windowMs: 60_000, max: 120, keyPrefix: 'admin-announcement' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid announcement id' });
   db.query('SELECT * FROM announcements WHERE id = ?', [id], (err, rows) => {
@@ -1443,7 +1443,7 @@ app.get('/api/admin/announcements/:id', authenticate, (req, res) => {
   });
 });
 
-app.post('/api/admin/announcements', authenticate, (req, res) => {
+app.post('/api/admin/announcements', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 10, keyPrefix: 'announcement-create' }), (req, res) => {
   const {
     title,
     summary,
@@ -1491,7 +1491,7 @@ app.post('/api/admin/announcements', authenticate, (req, res) => {
   );
 });
 
-app.put('/api/admin/announcements/:id', authenticate, (req, res) => {
+app.put('/api/admin/announcements/:id', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 20, keyPrefix: 'announcement-update' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid announcement id' });
 
@@ -1535,7 +1535,7 @@ app.put('/api/admin/announcements/:id', authenticate, (req, res) => {
   });
 });
 
-app.delete('/api/admin/announcements/:id', authenticate, (req, res) => {
+app.delete('/api/admin/announcements/:id', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 20, keyPrefix: 'announcement-delete' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid announcement id' });
   db.query('DELETE FROM announcements WHERE id = ?', [id], (err, result) => {
@@ -1546,7 +1546,7 @@ app.delete('/api/admin/announcements/:id', authenticate, (req, res) => {
 });
 
 //  ADMIN GALLERY CRUD 
-app.get('/api/admin/gallery', authenticate, (req, res) => {
+app.get('/api/admin/gallery', authenticate, rateLimit({ windowMs: 60_000, max: 120, keyPrefix: 'admin-gallery' }), (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 12;
   const offset = (page - 1) * limit;
@@ -1609,7 +1609,7 @@ app.get('/api/admin/gallery/stats', authenticate, (req, res) => {
   });
 });
 
-app.get('/api/admin/gallery/:id', authenticate, (req, res) => {
+app.get('/api/admin/gallery/:id', authenticate, rateLimit({ windowMs: 60_000, max: 120, keyPrefix: 'admin-gallery-image' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid image id' });
   db.query('SELECT * FROM gallery WHERE id = ?', [id], (err, rows) => {
@@ -1619,7 +1619,7 @@ app.get('/api/admin/gallery/:id', authenticate, (req, res) => {
   });
 });
 
-app.put('/api/admin/gallery/:id', authenticate, (req, res) => {
+app.put('/api/admin/gallery/:id', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 20, keyPrefix: 'gallery-update' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid image id' });
   const { caption, description, category, is_featured, display_order } = req.body || {};
@@ -1641,7 +1641,7 @@ app.put('/api/admin/gallery/:id', authenticate, (req, res) => {
   );
 });
 
-app.delete('/api/admin/gallery/:id', authenticate, (req, res) => {
+app.delete('/api/admin/gallery/:id', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 20, keyPrefix: 'gallery-delete' }), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid image id' });
 
@@ -1666,7 +1666,7 @@ app.delete('/api/admin/gallery/:id', authenticate, (req, res) => {
   });
 });
 
-app.get('/api/finance/export', authenticate, (req, res) => {
+app.get('/api/finance/export', authenticate, rateLimit({ windowMs: 60_000, max: 10, keyPrefix: 'finance-export' }), (req, res) => {
   db.query(
     `SELECT reference, type, category, amount, description, status, payment_method, transaction_date
      FROM transactions
@@ -1689,7 +1689,7 @@ app.get('/api/finance/export', authenticate, (req, res) => {
   );
 });
 
-app.post('/api/finance/transactions', authenticate, (req, res) => {
+app.post('/api/finance/transactions', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 20, keyPrefix: 'transaction-create' }), (req, res) => {
   const {
     type,
     category,
@@ -1735,7 +1735,7 @@ app.post('/api/finance/transactions', authenticate, (req, res) => {
   );
 });
 
-app.post('/api/admin/gallery', authenticate, upload.single('image'), (req, res) => {
+app.post('/api/admin/gallery', authenticate, rateLimit({ windowMs: 60 * 60_000, max: 10, keyPrefix: 'gallery-upload' }), upload.single('image'), (req, res) => {
   const { caption, description, category } = req.body;
   if (!req.file) return res.status(400).json({ message: 'Image is required' });
   const url = `/uploads/${req.file.filename}`;
