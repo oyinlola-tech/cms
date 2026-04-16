@@ -135,7 +135,7 @@ if (NODE_ENV === 'production' && configuredOrigins.length === 0) {
 }
 
 app.use(cors({
-  origin: configuredOrigins.length > 0 ? configuredOrigins : true,
+  origin: configuredOrigins.length > 0 ? configuredOrigins : false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400
