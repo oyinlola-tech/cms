@@ -1748,31 +1748,33 @@ app.post('/api/admin/gallery', authenticate, rateLimit({ windowMs: 60 * 60_000, 
     });
 });
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/programs', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'programs.html')));
-app.get('/gallery', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'gallery.html')));
-app.get('/announcements', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'announcements.html')));
-app.get('/announcements/:id', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'announcement-details.html')));
-app.get('/contact', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'contact.html')));
-app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'privacy.html')));
-app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'terms.html')));
-app.get('/give', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'give.html')));
-app.get('/error/empty', (req, res) => res.status(404).sendFile(path.join(__dirname, 'public', 'pages', 'error', 'empty.html')));
-app.get('/error/offline', (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'error', 'offline.html')));
-app.get('/admin/login', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'login.html')));
-app.get('/admin/forgot-password', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'forgot-password.html')));
-app.get('/admin/verify-otp', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'verify-otp.html')));
-app.get('/admin/reset-password', (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'reset-password.html')));
-app.get('/admin/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'src', 'index.html')));
-app.get('/admin/members', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'members.html')));
-app.get('/admin/members/:id', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'details', 'members-details.html')));
-app.get('/admin/finance', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'finance.html')));
-app.get('/admin/programs', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'programs.html')));
-app.get('/admin/announcements', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'announcements.html')));
-app.get('/admin/gallery', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'gallery.html')));
-app.get('/admin/reports', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'reports.html')));
-app.get('/admin/settings', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'settings.html')));
-app.get('/admin/activity', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'reports.html')));
+const staticFileLimiter = rateLimit({ windowMs: 60_000, max: 200, keyPrefix: 'static-files' });
+
+app.get('/', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/programs', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'programs.html')));
+app.get('/gallery', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'gallery.html')));
+app.get('/announcements', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'announcements.html')));
+app.get('/announcements/:id', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'announcement-details.html')));
+app.get('/contact', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'contact.html')));
+app.get('/privacy', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'privacy.html')));
+app.get('/terms', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'terms.html')));
+app.get('/give', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'give.html')));
+app.get('/error/empty', staticFileLimiter, (req, res) => res.status(404).sendFile(path.join(__dirname, 'public', 'pages', 'error', 'empty.html')));
+app.get('/error/offline', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'public', 'pages', 'error', 'offline.html')));
+app.get('/admin/login', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'login.html')));
+app.get('/admin/forgot-password', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'forgot-password.html')));
+app.get('/admin/verify-otp', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'verify-otp.html')));
+app.get('/admin/reset-password', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'auth', 'reset-password.html')));
+app.get('/admin/dashboard', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'index.html')));
+app.get('/admin/members', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'members.html')));
+app.get('/admin/members/:id', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'details', 'members-details.html')));
+app.get('/admin/finance', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'finance.html')));
+app.get('/admin/programs', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'programs.html')));
+app.get('/admin/announcements', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'announcements.html')));
+app.get('/admin/gallery', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'gallery.html')));
+app.get('/admin/reports', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'reports.html')));
+app.get('/admin/settings', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'settings.html')));
+app.get('/admin/activity', staticFileLimiter, (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'reports.html')));
 
 // API 404
 app.use('/api', (req, res) => {
