@@ -814,7 +814,7 @@ app.get('/api/members', authenticate, rateLimit({ windowMs: 60_000, max: 60, key
     });
 });
 
-app.get('/api/members/stats', authenticate, (req, res) => {
+app.get('/api/members/stats', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'members-stats' }), (req, res) => {
   db.query(
     `SELECT 
       (SELECT COUNT(*) FROM members) as total,
@@ -1249,7 +1249,7 @@ app.get('/api/admin/programs', authenticate, rateLimit({ windowMs: 60_000, max: 
   );
 });
 
-app.get('/api/admin/programs/stats', authenticate, (req, res) => {
+app.get('/api/admin/programs/stats', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'programs-stats' }), (req, res) => {
   db.query(
     `SELECT 
       SUM(status='upcoming') as upcoming,
@@ -1412,7 +1412,7 @@ app.get('/api/admin/announcements', authenticate, rateLimit({ windowMs: 60_000, 
   );
 });
 
-app.get('/api/admin/announcements/stats', authenticate, (req, res) => {
+app.get('/api/admin/announcements/stats', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'announcements-stats' }), (req, res) => {
   db.query(
     `SELECT
       SUM(status='published') as published,
@@ -1591,7 +1591,7 @@ app.get('/api/admin/gallery', authenticate, rateLimit({ windowMs: 60_000, max: 1
   );
 });
 
-app.get('/api/admin/gallery/stats', authenticate, (req, res) => {
+app.get('/api/admin/gallery/stats', authenticate, rateLimit({ windowMs: 60_000, max: 60, keyPrefix: 'gallery-stats' }), (req, res) => {
   fs.readdir(uploadsDir, { withFileTypes: true }, (err, entries) => {
     if (err) return res.status(500).json({ message: err.message });
     const files = entries.filter(e => e.isFile()).map(e => path.join(uploadsDir, e.name));
