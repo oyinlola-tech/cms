@@ -1782,7 +1782,7 @@ app.use('/api', (req, res) => {
 });
 
 // Fallback (pages)
-app.get('*', (req, res) => {
+app.get('*', staticFileLimiter, (req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', 'pages', 'error', 'empty.html'));
 });
 
