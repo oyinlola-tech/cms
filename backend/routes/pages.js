@@ -32,7 +32,7 @@ function createPagesRouter({ config, rateLimiters }) {
   router.get('/admin/reports', limiter, (req, res) => res.sendFile(path.join(srcDir, 'pages', 'reports.html')));
   router.get('/admin/settings', limiter, (req, res) => res.sendFile(path.join(srcDir, 'pages', 'settings.html')));
   router.get('/admin/activity', limiter, (req, res) => res.sendFile(path.join(srcDir, 'pages', 'reports.html')));
-  router.get('*', limiter, (req, res) => res.status(404).sendFile(path.join(publicDir, 'pages', 'error', 'empty.html')));
+  router.use(limiter, (req, res) => res.status(404).sendFile(path.join(publicDir, 'pages', 'error', 'empty.html')));
 
   return router;
 }

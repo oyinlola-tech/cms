@@ -360,6 +360,49 @@
     localStorage.removeItem('currentUser');
     window.location.href = '/admin/login';
   }
+
+  function parseTrailingNumericSegment(pathname, prefix) {
+    if (typeof pathname !== 'string' || typeof prefix !== 'string') return null;
+    if (!pathname.startsWith(prefix)) return null;
+    const remainder = pathname.slice(prefix.length);
+    if (!remainder) return null;
+    for (const ch of remainder) {
+      if (ch < '0' || ch > '9') return null;
+    }
+    return remainder;
+  }
+
+  function hasUppercase(value) {
+    for (const ch of String(value || '')) {
+      if (ch >= 'A' && ch <= 'Z') return true;
+    }
+    return false;
+  }
+
+  function hasDigit(value) {
+    for (const ch of String(value || '')) {
+      if (ch >= '0' && ch <= '9') return true;
+    }
+    return false;
+  }
+
+  function hasSymbol(value) {
+    for (const ch of String(value || '')) {
+      const isUpper = ch >= 'A' && ch <= 'Z';
+      const isLower = ch >= 'a' && ch <= 'z';
+      const isDigitChar = ch >= '0' && ch <= '9';
+      if (!isUpper && !isLower && !isDigitChar) return true;
+    }
+    return false;
+  }
+
+  function stripFileExtension(filename) {
+    const input = String(filename || '');
+    const lastDot = input.lastIndexOf('.');
+    if (lastDot <= 0) return input;
+    return input.slice(0, lastDot);
+  }
+
   function requireAuth() {
     if (!authToken) {
       window.location.href = '/admin/login';
@@ -369,15 +412,15 @@
   }
   
   const path = window.location.pathname;
-  const memberDetailsMatch = path.match(/^\/admin\/members\/(\d+)$/);
-  const announcementDetailsMatch = path.match(/^\/announcements\/(\d+)$/);
+  const memberIdFromPath = parseTrailingNumericSegment(path, '/admin/members/');
+  const announcementIdFromPath = parseTrailingNumericSegment(path, '/announcements/');
     const pageDetector = {
     isHome: path === '/' || path === '/public/index.html',
     isPrograms: path === '/programs' || path === '/public/pages/programs.html',
     isGallery: path === '/gallery' || path === '/public/pages/gallery.html',
     isAnnouncements: path === '/announcements' || path === '/public/pages/announcements.html',
-    isAnnouncementDetails: Boolean(announcementDetailsMatch),
-    announcementId: announcementDetailsMatch ? announcementDetailsMatch[1] : null,
+    isAnnouncementDetails: Boolean(announcementIdFromPath),
+    announcementId: announcementIdFromPath,
     isContact: path === '/contact' || path === '/public/pages/contact.html',
     isLogin: path === '/admin/login' || path === '/src/auth/login.html',
     isForgotPassword: path === '/admin/forgot-password',
@@ -385,8 +428,8 @@
     isResetPassword: path === '/admin/reset-password',
     isDashboard: path === '/admin/dashboard' || path === '/src/pages/dashboard.html',
     isMembers: path === '/admin/members' || path === '/src/pages/members.html',
-    isMemberDetails: Boolean(memberDetailsMatch),
-    memberId: memberDetailsMatch ? memberDetailsMatch[1] : null,
+    isMemberDetails: Boolean(memberIdFromPath),
+    memberId: memberIdFromPath,
     isFinance: path === '/admin/finance' || path === '/src/pages/finance.html',
     isProgramsAdmin: path === '/admin/programs' || path === '/src/pages/programs.html',
     isAnnouncementsAdmin: path === '/admin/announcements' || path === '/src/pages/announcements.html',
@@ -1076,9 +1119,9 @@
       const val = newPass.value;
       let strength = 0;
       if (val.length >= 8) strength++;
-      if (/[A-Z]/.test(val)) strength++;
-      if (/[0-9]/.test(val)) strength++;
-      if (/[^A-Za-z0-9]/.test(val)) strength++;
+      if (hasUppercase(val)) strength++;
+      if (hasDigit(val)) strength++;
+      if (hasSymbol(val)) strength++;
       
       strengthBars.forEach((id, i) => {
         const bar = document.getElementById(id);
@@ -2580,7 +2623,7 @@
       for (const file of files) {
         const fd = new FormData();
         fd.append('image', file);
-        fd.append('caption', file.name.replace(/\.[^/.]+$/, '').replaceAll('_', ' '));
+        fd.append('caption', stripFileExtension(file.name).replaceAll('_', ' '));
         try {
           await apiRequest('/admin/gallery', { method: 'POST', body: fd });
         } catch (e) {
