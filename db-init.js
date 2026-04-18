@@ -5,7 +5,6 @@ require('dotenv').config();
 const DB_NAME = process.env.DB_NAME || 'church_db';
 const SALT_ROUNDS = 10;
 
-// Helper: promisified query
 function query(connection, sql, params = []) {
   return new Promise((resolve, reject) => {
     connection.query(sql, params, (err, results) => {
@@ -292,7 +291,7 @@ async function insertDefaultExternalLinks(connection) {
 async function insertDefaultAdmin(connection) {
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
-  const adminName = process.env.ADMIN_NAME || 'Parish Administrator';
+  const adminName = process.env.ADMIN_NAME;
 
   if (!adminEmail || !adminPassword) {
     console.warn('WARNING: ADMIN_EMAIL or ADMIN_PASSWORD missing in .env. Skipping default admin creation.');
@@ -319,9 +318,9 @@ async function insertDefaultAdmin(connection) {
 // Main initialization function
 async function initializeDatabase() {
   const initConn = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'mysql'
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD
   });
 
   try {

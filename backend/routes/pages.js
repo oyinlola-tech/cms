@@ -6,7 +6,6 @@ function createPagesRouter({ config, rateLimiters }) {
   const staticLimiter = rateLimiters.staticFiles;
   const { publicDir, srcDir } = config.paths;
 
-  // Apply rate limiting to ALL routes explicitly
   router.get('/favicon.ico', (req, res) => res.redirect(301, '/favicon.svg'));
   router.get('/', staticLimiter, (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
   router.get('/programs', staticLimiter, (req, res) => res.sendFile(path.join(publicDir, 'pages', 'programs.html')));
