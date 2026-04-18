@@ -339,6 +339,15 @@
   <span class="absolute right-full mr-4 bg-primary text-on-primary px-4 py-2 rounded-lg text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Admin Support</span>
 </button>
 
-<script src="/js/app.js" defer></script>
+<script src="/js/utils/shared.js" defer></script>
+<script src="/js/utils/api.js" defer></script>
+<script src="/js/utils/auth.js" defer></script>
+<script src="/src/js/pages/programs.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.CMS && window.CMS.shared) window.CMS.shared.init();
+    if (window.CMS && window.CMS.pages && window.CMS.pages.programsAdmin) window.CMS.pages.programsAdmin.init();
+  });
+</script>
 </body>
 </html>
