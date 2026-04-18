@@ -230,6 +230,15 @@
   </div>
 </footer>
 
-<script src="/js/app.js" defer></script>
+<script src="/js/utils/shared.js" defer></script>
+<script src="/js/utils/api.js" defer></script>
+<script src="/js/utils/auth.js" defer></script>
+<script src="/public/js/pages/home.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.CMS && window.CMS.shared) window.CMS.shared.init();
+    if (window.CMS && window.CMS.pages && window.CMS.pages.home) window.CMS.pages.home.init();
+  });
+</script>
 </body>
 </html>

@@ -248,6 +248,15 @@
     © 2026 The Sacred Hearth Okitipupa. All Rights Reserved.
   </div>
 </footer>
-<script src="/js/app.js" defer></script>
+<script src="/js/utils/shared.js" defer></script>
+<script src="/js/utils/api.js" defer></script>
+<script src="/js/utils/auth.js" defer></script>
+<script src="/public/js/pages/programs.js" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.CMS && window.CMS.shared) window.CMS.shared.init();
+    if (window.CMS && window.CMS.pages && window.CMS.pages.programs) window.CMS.pages.programs.init();
+  });
+</script>
 </body>
 </html>
