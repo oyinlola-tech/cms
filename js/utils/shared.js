@@ -271,6 +271,20 @@
     });
   }
 
+  function updateFooterYear() {
+    const currentYear = new Date().getFullYear();
+    const copyrightElements = document.querySelectorAll('[data-copyright-year]');
+    copyrightElements.forEach(el => {
+      el.textContent = currentYear;
+    });
+    const genericYear = document.querySelectorAll('footer span, footer p, footer div');
+    genericYear.forEach(el => {
+      if (el.textContent.includes('©') && el.textContent.match(/\d{4}/)) {
+        el.textContent = el.textContent.replace(/\d{4}/, String(currentYear));
+      }
+    });
+  }
+
   CMS.shared = {
     formatCurrency,
     formatDate,
@@ -287,9 +301,11 @@
     debounce,
     normalizeAdminSidebar,
     renderPublicChrome,
+    updateFooterYear,
     init: function() {
       this.normalizeAdminSidebar();
       this.renderPublicChrome();
+      this.updateFooterYear();
     }
   };
 
