@@ -1,12 +1,19 @@
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
 const { parseId, parseLimit, parsePage } = require('../utils/validation');
 
 function createAdminContentRouter({ db, authenticate, rateLimiters, uploadService }) {
   const router = express.Router();
+  const adminGalleryStatsRateLimit = rateLimiters?.adminRead || rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false
+  });
 
   router.get('/admin/programs', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const page = parsePage(req.query.page, 1);
@@ -433,7 +440,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     });
   }));
 
-  router.get('/admin/gallery/stats', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/gallery/stats', authenticate, adminGalleryStatsRateLimit, asyncHandler(async (req, res) => {
     const entries = await fs.promises.readdir(uploadService.uploadsDir, { withFileTypes: true });
     let totalBytes = 0;
 
