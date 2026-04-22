@@ -8,6 +8,10 @@ const { isStrongEnoughPassword, isValidEmail } = require('../utils/validation');
 
 function createAuthRouter({ db, config, rateLimiters, authenticate, emailService }) {
   const router = express.Router();
+  const resetPasswordLimiter =
+    rateLimiters.resetPassword ||
+    rateLimiters.authWrite ||
+    ((req, res, next) => next());
 
   router.post('/login', rateLimiters.login, asyncHandler(async (req, res) => {
     const { email, password } = req.body || {};
@@ -107,7 +111,7 @@ function createAuthRouter({ db, config, rateLimiters, authenticate, emailService
     res.json({ token });
   }));
 
-  router.post('/reset-password', (rateLimiters.resetPassword || rateLimiters.authWrite), asyncHandler(async (req, res) => {
+  router.post('/reset-password', resetPasswordLimiter, asyncHandler(async (req, res) => {
     const { token, newPassword } = req.body || {};
     if (typeof token !== 'string' || !isStrongEnoughPassword(newPassword)) {
       res.status(400).json({ message: 'Invalid request' });
