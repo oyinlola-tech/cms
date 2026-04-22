@@ -4,7 +4,10 @@ const path = require('path');
 function createPagesRouter({ config, rateLimiters }) {
   const router = express.Router();
   const staticLimiter = rateLimiters.staticFiles;
+  const effectiveStaticLimiter = typeof staticLimiter === 'function' ? staticLimiter : (req, res, next) => next();
   const { publicDir, srcDir } = config.paths;
+
+  router.use(effectiveStaticLimiter);
 
   router.get('/favicon.ico', (req, res) => res.redirect(301, '/favicon.svg'));
   router.get('/', staticLimiter, (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
