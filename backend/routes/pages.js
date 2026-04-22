@@ -3,8 +3,11 @@ const path = require('path');
 
 function createPagesRouter({ config, rateLimiters }) {
   const router = express.Router();
-  const staticLimiter = rateLimiters.staticFiles;
-  const effectiveStaticLimiter = typeof staticLimiter === 'function' ? staticLimiter : (req, res, next) => next();
+  const staticLimiter = rateLimiters && rateLimiters.staticFiles;
+  if (typeof staticLimiter !== 'function') {
+    throw new Error('createPagesRouter requires rateLimiters.staticFiles middleware');
+  }
+  const effectiveStaticLimiter = staticLimiter;
   const { publicDir, srcDir } = config.paths;
 
   router.use(effectiveStaticLimiter);
