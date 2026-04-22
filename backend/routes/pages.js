@@ -22,8 +22,13 @@ function createPagesRouter({ config, rateLimiters }) {
   router.get('/privacy', effectiveStaticLimiter, (req, res) => res.sendFile(path.join(publicDir, 'pages', 'privacy.html')));
   router.get('/terms', effectiveStaticLimiter, (req, res) => res.sendFile(path.join(publicDir, 'pages', 'terms.html')));
   router.get('/give', effectiveStaticLimiter, (req, res) => res.sendFile(path.join(publicDir, 'pages', 'give.html')));
-  router.get('/error/empty', effectiveStaticLimiter, (req, res) => res.status(404).sendFile(path.join(publicDir, 'pages', 'error', 'empty.html')));
-  router.get('/error/offline', effectiveStaticLimiter, (req, res) => res.sendFile(path.join(publicDir, 'pages', 'error', 'offline.html')));
+
+  const errorPagesRouter = express.Router();
+  errorPagesRouter.use(effectiveStaticLimiter);
+  errorPagesRouter.get('/empty', (req, res) => res.status(404).sendFile(path.join(publicDir, 'pages', 'error', 'empty.html')));
+  errorPagesRouter.get('/offline', (req, res) => res.sendFile(path.join(publicDir, 'pages', 'error', 'offline.html')));
+  router.use('/error', errorPagesRouter);
+
   router.get('/admin/login', effectiveStaticLimiter, (req, res) => res.sendFile(path.join(srcDir, 'auth', 'login.html')));
   router.get('/admin/forgot-password', effectiveStaticLimiter, (req, res) => res.sendFile(path.join(srcDir, 'auth', 'forgot-password.html')));
   router.get('/admin/verify-otp', effectiveStaticLimiter, (req, res) => res.sendFile(path.join(srcDir, 'auth', 'verify-otp.html')));
