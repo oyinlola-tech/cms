@@ -2,22 +2,13 @@ const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
 const { isStrongEnoughPassword, isValidEmail } = require('../utils/validation');
 
 function createAuthRouter({ db, config, rateLimiters, authenticate, emailService }) {
   const router = express.Router();
-  const resetPasswordLimiter = rateLimiters?.resetPassword || rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false
-  });
-    rateLimiters.resetPassword ||
-    rateLimiters.authWrite ||
-    ((req, res, next) => next());
+  const resetPasswordLimiter = rateLimiters.resetPassword;
 
   router.post('/login', rateLimiters.login, asyncHandler(async (req, res) => {
     const { email, password } = req.body || {};

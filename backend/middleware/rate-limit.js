@@ -104,6 +104,31 @@ function createRateLimiters() {
       max: 10,
       identifier: (req) => String(req.body?.email || '').trim().toLowerCase()
     }),
+    resetPassword: createRateLimit(store, {
+      keyPrefix: 'reset-password',
+      windowMs: 10 * 60_000,
+      max: 5,
+      identifier: (req) => {
+        try {
+          if(req.body?.token) {
+            const payload = JSON.parse(Buffer.from(req.body.token.split('.')[1], 'base64').toString());
+            return String(payload.email || '').trim().toLowerCase();
+          }
+        } catch(e) {}
+        return '';
+      }
+    }),
+    logout: createRateLimit(store, {
+      keyPrefix: 'logout',
+      windowMs: 5 * 60_000,
+      max: 20,
+      identifier: (req) => String(req.userId || '')
+    }),
+    refreshToken: createRateLimit(store, {
+      keyPrefix: 'refresh-token',
+      windowMs: 5 * 60_000,
+      max: 10
+    }),
     authWrite: createRateLimit(store, { keyPrefix: 'auth-write', windowMs: 5 * 60_000, max: 10 }),
     publicRead: createRateLimit(store, { keyPrefix: 'public-read', windowMs: 60_000, max: 200 }),
     publicWrite: createRateLimit(store, { keyPrefix: 'public-write', windowMs: 10 * 60_000, max: 10 }),
