@@ -1,4 +1,4 @@
-# Church Management System (CMS) – Sacred Hearth (Okitipupa)
+# Church Management System (CMS) – Sacred Hearth (Okitipupa) 
 
 This project is a Church Management System (CMS) built to help a local church in **Okitipupa, Ondo State, Nigeria** manage records and operations digitally.
 
