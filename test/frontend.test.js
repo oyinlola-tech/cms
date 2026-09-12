@@ -362,3 +362,137 @@ test('the home page renders any number of programs without indexing past the lis
     assert.equal(cards, count, `${count} programs should render ${count} card(s)`);
   }
 });
+
+// --- Footer design ---
+
+const PUBLIC_PAGES_WITH_FOOTER = [
+  'public/index.html',
+  'public/pages/announcement-details.html',
+  'public/pages/announcements.html',
+  'public/pages/contact.html',
+  'public/pages/gallery.html',
+  'public/pages/give.html',
+  'public/pages/privacy.html',
+  'public/pages/programs.html',
+  'public/pages/terms.html',
+  'public/pages/error/403.html',
+  'public/pages/error/404.html',
+  'public/pages/error/500.html',
+  'public/pages/error/empty.html',
+  'public/pages/error/offline.html'
+];
+
+function footerMarkup(file) {
+  const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  return html.slice(html.indexOf('<footer'), html.lastIndexOf('</footer>') + '</footer>'.length);
+}
+
+test('every public page carries the identical footer and loads its module', () => {
+  const variants = new Set(PUBLIC_PAGES_WITH_FOOTER.map(footerMarkup));
+  assert.equal(variants.size, 1, `expected one footer version, found ${variants.size}`);
+
+  for (const file of PUBLIC_PAGES_WITH_FOOTER) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.ok(html.includes('/js/footer.js'), `${file} does not load the footer module`);
+  }
+});
+
+test('the footer renders the weekly schedule without JavaScript', () => {
+  const { document } = parseHTML(fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8'));
+  const slots = document.querySelectorAll('#footer-week li');
+
+  // The rail is the footer's reason for existing, so it must survive a failed
+  // or blocked script load rather than collapsing to an empty list.
+  assert.equal(slots.length, 3);
+  assert.match(document.querySelector('#footer-week').textContent, /Divine Worship/);
+});
+
+test('the week rail marks exactly one upcoming service', async () => {
+  const { document, window } = bootPage('public/index.html', {
+    pathname: '/',
+    api: {
+      '/programs/weekly-schedule': [
+        { day_of_week: 'Sunday', program_name: 'Divine Worship', start_time: '08:00:00', display_order: 1 },
+        { day_of_week: 'Wednesday', program_name: 'Prayer Hour', start_time: '17:00:00', display_order: 2 },
+        { day_of_week: 'Friday', program_name: 'Vigil (Monthly)', start_time: '22:00:00', display_order: 3 }
+      ]
+    }
+  });
+
+  await window.CMS.footer.init();
+  await settle();
+
+  const slots = document.querySelectorAll('#footer-week li');
+  assert.equal(slots.length, 3);
+
+  const next = document.querySelectorAll('#footer-week li.is-next');
+  assert.equal(next.length, 1, 'exactly one service should be marked as next');
+  assert.match(next[0].textContent, /Today|Tomorrow|In \d+ days/);
+});
+
+test('the next-service calculation rolls over correctly', () => {
+  const { window } = bootPage('public/index.html', { pathname: '/' });
+  const { nextOccurrence, relativeLabel, splitTime } = window.CMS.footer;
+
+  // A Saturday morning: Sunday's 8am service is tomorrow.
+  const saturday = new Date(2026, 8, 12, 9, 0, 0);
+  const sunday = nextOccurrence('Sunday', '08:00:00', saturday);
+  assert.equal(sunday.getDay(), 0);
+  assert.equal(relativeLabel(sunday, saturday), 'Tomorrow');
+
+  // A Sunday at 09:00, after the 08:00 service: it rolls to next week.
+  const afterService = new Date(2026, 8, 13, 9, 0, 0);
+  const rolled = nextOccurrence('Sunday', '08:00:00', afterService);
+  assert.equal(Math.round((rolled - afterService) / 86400000), 7);
+
+  assert.deepEqual(splitTime('17:00:00'), { clock: '5:00', meridiem: 'PM' });
+  assert.deepEqual(splitTime('00:30:00'), { clock: '12:30', meridiem: 'AM' });
+});
+
+test('footer links are keyboard-visible and respect reduced motion', () => {
+  const { document } = parseHTML(fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8'));
+  const footer = document.querySelector('footer');
+
+  for (const link of footer.querySelectorAll('a')) {
+    const classes = link.getAttribute('class') || '';
+    assert.ok(/focus-visible:/.test(classes), `footer link "${link.textContent.trim()}" has no focus style`);
+    if (/\btransition/.test(classes)) {
+      assert.ok(/motion-reduce:transition-none/.test(classes),
+        `footer link "${link.textContent.trim()}" animates without a reduced-motion opt-out`);
+    }
+  }
+});
+
+test('the oversized wordmark is decorative and hidden from assistive tech', () => {
+  for (const file of ['public/index.html', 'src/pages/members.html']) {
+    const { document } = parseHTML(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+    const footer = document.querySelector('footer');
+    const mark = footer.querySelector('[aria-hidden="true"] p.font-headline');
+    assert.ok(mark, `${file} is missing the wordmark`);
+    // It repeats the parish name already present in the copyright line, so it
+    // must not be announced twice.
+    assert.match(mark.textContent, /Sacred Hearth/);
+  }
+});
+
+test('footer colour tokens all resolve against the shared Tailwind config', () => {
+  const scope = {};
+  new Function('window', fs.readFileSync(path.join(ROOT, 'js/tailwind-config.js'), 'utf8'))(scope);
+  const colors = scope.__tailwindConfig.theme.extend.colors;
+
+  for (const file of ['public/index.html', 'src/pages/members.html']) {
+    const { document } = parseHTML(fs.readFileSync(path.join(ROOT, file), 'utf8'));
+    const footer = document.querySelector('footer');
+    const classes = [...footer.querySelectorAll('*')]
+      .map((el) => el.getAttribute('class') || '')
+      .concat(footer.getAttribute('class') || '')
+      .join(' ');
+
+    for (const match of classes.matchAll(/(?:bg|text|border|divide|ring)-((?:on-)?[a-z][a-z-]*)(?:\/|\[|\s|$)/g)) {
+      const token = match[1];
+      if (/^(primary|secondary|tertiary|surface|background|error|outline|inverse|on-)/.test(token)) {
+        assert.ok(colors[token], `${file}: footer uses undefined colour token "${token}"`);
+      }
+    }
+  }
+});
