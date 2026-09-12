@@ -87,13 +87,6 @@
       if (displayNameEl) displayNameEl.textContent = currentUser.name;
     }
 
-    var logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', function() {
-        auth.logout();
-      });
-    }
-
     Promise.all([
       loadDashboardStats(),
       loadDonationChart(),

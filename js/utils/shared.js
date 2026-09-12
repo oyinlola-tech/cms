@@ -238,6 +238,25 @@
     };
   }
 
+  /**
+   * Binds the sidebar logout button.
+   *
+   * Only the dashboard page wired this up, so "Logout" was inert on every
+   * other admin screen. Doing it once here covers all of them.
+   */
+  function initLogoutButton() {
+    const button = document.getElementById('logout-btn');
+    if (!button || button.dataset.logoutBound === 'true') return;
+
+    button.dataset.logoutBound = 'true';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (CMS.auth && typeof CMS.auth.logout === 'function') {
+        CMS.auth.logout();
+      }
+    });
+  }
+
   function normalizeAdminSidebar() {
     if (!window.location.pathname.startsWith('/admin')) return;
     const aside = document.querySelector('aside');
@@ -352,11 +371,13 @@
     debounce,
     validatePasswordStrength,
     normalizeAdminSidebar,
+    initLogoutButton,
     renderPublicChrome,
     updateFooterYear,
     applyStickyFooter,
     init: function() {
       this.normalizeAdminSidebar();
+      this.initLogoutButton();
       this.renderPublicChrome();
       this.applyStickyFooter();
       this.updateFooterYear();

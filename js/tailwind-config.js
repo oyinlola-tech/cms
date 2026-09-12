@@ -1,13 +1,20 @@
 /**
  * Shared Tailwind CDN configuration.
  *
- * Previously this ~70-line block was pasted into every HTML page - and was
- * missing entirely from terms, privacy, give and announcement-details, which
- * left their footers referencing colour tokens that did not exist. Loading it
- * from one file keeps every page on the same palette and lets the CSP drop
- * 'unsafe-inline' for scripts.
+ * Previously this ~70-line block was pasted inline into every HTML page - and
+ * was missing entirely from terms, privacy, give and announcement-details,
+ * which left their footers referencing colour tokens that did not exist.
+ * Loading it from one file keeps every page on the same palette and lets the
+ * CSP drop 'unsafe-inline' for scripts.
+ *
+ * The assignment is guarded: a bare `tailwind.config = ...` throws a
+ * ReferenceError if the CDN script did not load (offline, blocked, or a CSP
+ * change), which would abort this file before anything else in it could run.
  */
-tailwind.config = {
+(function () {
+  'use strict';
+
+  var config = {
       darkMode: "class",
       theme: {
         extend: {
@@ -74,3 +81,13 @@ tailwind.config = {
         }
       }
     };
+
+  if (typeof window.tailwind === 'undefined') {
+    // The CDN did not load, so there is nothing to configure. Keep the config
+    // reachable for debugging rather than throwing.
+    window.__tailwindConfig = config;
+    return;
+  }
+
+  window.tailwind.config = config;
+})();
