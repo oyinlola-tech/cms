@@ -100,13 +100,15 @@
         (isNext
           ? '<span class="absolute left-0 top-6 bottom-6 w-px bg-secondary-container sm:left-0"></span>'
           : '') +
-        '<div class="flex items-baseline justify-between gap-3">' +
+        // The relative label sits beside the day name, not pushed to the far
+        // edge of the cell where it reads as a separate column.
+        '<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">' +
           '<p class="font-body text-[10px] font-black uppercase tracking-[0.22em] ' +
             (isNext ? 'text-secondary-container' : 'text-on-primary/40') + '">' +
             escapeHtml(entry.day) +
           '</p>' +
           (isNext && entry.next
-            ? '<p class="font-body text-[10px] font-bold uppercase tracking-[0.14em] text-secondary-container/80">' +
+            ? '<p class="rounded-full bg-secondary-container/15 px-2 py-0.5 font-body text-[10px] font-bold uppercase tracking-[0.14em] text-secondary-container">' +
                 escapeHtml(relativeLabel(entry.next, now)) +
               '</p>'
             : '') +
