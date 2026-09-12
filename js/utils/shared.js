@@ -244,6 +244,65 @@
    * Only the dashboard page wired this up, so "Logout" was inert on every
    * other admin screen. Doing it once here covers all of them.
    */
+  /**
+   * Wires any [data-target] password visibility toggle.
+   *
+   * Only the reset-password page implemented this, so the toggle added to the
+   * sign-in form would otherwise have been inert. Doing it once here covers
+   * every auth screen.
+   */
+  /**
+   * Puts a submit button into its busy state and returns a restore function.
+   *
+   * Assigning to button.textContent (as the auth pages used to) destroys any
+   * markup inside the button - here, the arrow - and hard-codes the idle label
+   * in the script, so it silently drifts from the markup. Capturing the
+   * original HTML avoids both problems.
+   *
+   * @param {HTMLButtonElement} button
+   * @param {string} busyLabel
+   * @returns {Function} restore
+   */
+  function setButtonBusy(button, busyLabel) {
+    if (!button) return () => {};
+
+    if (button.dataset.idleHtml === undefined) {
+      button.dataset.idleHtml = button.innerHTML;
+    }
+
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = busyLabel;
+
+    return function restore() {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.innerHTML = button.dataset.idleHtml;
+    };
+  }
+
+  function initPasswordToggles() {
+    document.querySelectorAll('.toggle-password').forEach((button) => {
+      if (button.dataset.toggleBound === 'true') return;
+      button.dataset.toggleBound = 'true';
+
+      button.addEventListener('click', () => {
+        const target = document.querySelector(button.getAttribute('data-target') || '');
+        if (!target) return;
+
+        const revealed = target.type === 'text';
+        target.type = revealed ? 'password' : 'text';
+        button.setAttribute('aria-pressed', String(!revealed));
+
+        const label = button.querySelector('.sr-only');
+        if (label) label.textContent = revealed ? 'Show password' : 'Hide password';
+
+        const icon = button.querySelector('.material-symbols-outlined');
+        if (icon) icon.textContent = revealed ? 'visibility' : 'visibility_off';
+      });
+    });
+  }
+
   function initLogoutButton() {
     const button = document.getElementById('logout-btn');
     if (!button || button.dataset.logoutBound === 'true') return;
@@ -258,8 +317,10 @@
   }
 
   function normalizeAdminSidebar() {
-    if (!window.location.pathname.startsWith('/admin')) return;
-    const aside = document.querySelector('aside');
+    // Match the dashboard sidebar explicitly. Selecting "the first <aside> on
+    // any /admin path" also caught the sign-in page's brand panel and forced
+    // it to w-64/fixed, collapsing that layout.
+    const aside = document.querySelector('aside[data-admin-sidebar]');
     if (!aside) return;
 
     aside.classList.add('w-64', 'fixed', 'left-0', 'top-0', 'h-screen');
@@ -372,12 +433,15 @@
     validatePasswordStrength,
     normalizeAdminSidebar,
     initLogoutButton,
+    initPasswordToggles,
+    setButtonBusy,
     renderPublicChrome,
     updateFooterYear,
     applyStickyFooter,
     init: function() {
       this.normalizeAdminSidebar();
       this.initLogoutButton();
+      this.initPasswordToggles();
       this.renderPublicChrome();
       this.applyStickyFooter();
       this.updateFooterYear();

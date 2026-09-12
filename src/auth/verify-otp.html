@@ -3,116 +3,111 @@
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>OTP Verification | The Sacred Hearth</title>
+  <title>Enter code - The Sacred Hearth</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
-  
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
-  
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script src="/js/tailwind-config.js"></script>
-  
-<style>
-    .material-symbols-outlined {
-      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    }
-    .glass-panel {
-      background: rgba(44, 105, 78, 0.05);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-  </style>
+  <link rel="stylesheet" href="/css/site.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
 </head>
 
-<body class="bg-surface font-body text-on-surface min-h-screen flex flex-col items-center justify-center relative overflow-hidden" data-page="verifyOTP">
+<body class="min-h-screen bg-surface font-body text-on-surface selection:bg-secondary-container selection:text-on-secondary-fixed" data-page="verifyOTP">
 
-<!-- Aesthetic Background Elements -->
-<div class="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
-  <div class="absolute -top-24 -left-24 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
-  <div class="absolute -bottom-24 -right-24 w-[30rem] h-[30rem] bg-secondary/5 rounded-full blur-3xl"></div>
-</div>
+<div class="grid min-h-screen lg:grid-cols-2">
 
-<!-- Content Wrapper -->
-<main class="w-full max-w-xl px-6 relative z-10">
-  
-  <!-- Brand Identity Header -->
-  <div class="text-center mb-12">
-    <div class="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-6 shadow-xl shadow-primary/10">
-      <span class="material-symbols-outlined text-on-primary text-3xl" style="font-variation-settings: 'FILL' 1;">church</span>
-    </div>
-    <h1 class="font-headline text-4xl md:text-5xl font-bold text-primary tracking-tight mb-4">The Sacred Hearth</h1>
-    <p class="font-body text-on-surface-variant max-w-sm mx-auto text-lg">Verification of your digital presence within the Okitipupa Sanctuary.</p>
-  </div>
+  <!--
+    Brand panel. Deliberately typographic: the previous version leaned on an
+    externally hosted photograph that can disappear without warning.
+  -->
+  <aside class="relative hidden flex-col justify-between overflow-hidden bg-primary p-12 pb-36 text-on-primary lg:flex">
+    <a href="/" class="relative z-10 inline-flex w-fit items-center gap-2 font-body text-xs font-bold text-on-primary/60 hover:text-secondary-container focus-visible:text-secondary-container focus-visible:outline-none transition-colors">
+      <span aria-hidden="true">&larr;</span> Back to the parish site
+    </a>
 
-  <!-- Verification Card -->
-  <section class="bg-surface-container-lowest rounded-xl p-8 md:p-12 shadow-[30px_0_60px_-15px_rgba(0,45,28,0.06)] border border-outline-variant/10">
-    <div class="flex flex-col items-center">
-      
-      <div class="mb-8 text-center">
-        <h2 class="font-headline text-2xl font-bold text-primary mb-2">Secure Access</h2>
-        <p class="text-on-surface-variant text-sm">
-          We've sent a 6-digit code to your registered 
-          <span id="contact-mask" class="font-semibold">mobile device</span>.
-        </p>
-      </div>
+    <div class="relative z-10 max-w-md">
+      <p class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Parish administration</p>
+      <h2 class="mt-5 font-headline text-[2.75rem] font-black leading-[1.02] tracking-[-0.02em]">
+        Keep the week<br/>running.
+      </h2>
+      <p class="mt-5 font-body text-base leading-relaxed text-on-primary/60">
+        Members, giving, programmes and announcements for The Sacred Hearth, Okitipupa.
+      </p>
 
-      <!-- Dynamic Status Message Container -->
-      <div id="otp-status" class="w-full mb-4 p-3 rounded-lg text-sm hidden"></div>
-
-      <!-- OTP Form -->
-      <form id="otp-form" class="w-full">
-        <!-- OTP Input Fields (6-Digit) -->
-        <div class="grid grid-cols-6 gap-3 md:gap-4 mb-10 w-full">
-          <input id="otp-1" name="otp1" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
-          <input id="otp-2" name="otp2" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
-          <input id="otp-3" name="otp3" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
-          <input id="otp-4" name="otp4" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
-          <input id="otp-5" name="otp5" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
-          <input id="otp-6" name="otp6" class="otp-input w-full aspect-square text-center text-2xl font-bold bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all text-primary" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" required/>
+      <dl class="mt-10 space-y-4 border-t border-on-primary/10 pt-8">
+        <div class="flex items-baseline justify-between gap-4">
+          <dt class="font-body text-sm text-on-primary/55">Sunday</dt>
+          <dd class="font-headline text-lg font-black text-secondary-container">8:00 AM</dd>
         </div>
+        <div class="flex items-baseline justify-between gap-4">
+          <dt class="font-body text-sm text-on-primary/55">Wednesday</dt>
+          <dd class="font-headline text-lg font-black">5:00 PM</dd>
+        </div>
+        <div class="flex items-baseline justify-between gap-4">
+          <dt class="font-body text-sm text-on-primary/55">Friday</dt>
+          <dd class="font-headline text-lg font-black">10:00 PM</dd>
+        </div>
+      </dl>
+    </div>
 
-        <!-- Hidden field for combined OTP -->
-        <input type="hidden" id="otp-combined" name="otp"/>
+    <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 overflow-hidden">
+      <p class="-mb-[0.17em] select-none whitespace-nowrap pl-12 font-headline text-[7rem] font-black leading-[0.8] tracking-[-0.045em] text-on-primary/[0.07]">
+        Sacred Hearth
+      </p>
+    </div>
+  </aside>
 
-        <!-- Verify Button -->
-        <button id="verify-btn" class="w-full bg-primary hover:bg-primary-container text-on-primary py-4 rounded-full font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group transition-all transform active:scale-95" type="submit">
-          Verify Identity
-          <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+  <!-- Form panel -->
+  <main class="flex items-center justify-center px-6 py-12 sm:px-10">
+    <div class="w-full max-w-[26rem]">
+
+      <a href="/" class="mb-10 inline-flex items-center gap-2 font-headline text-xl font-black tracking-tight text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded lg:hidden">
+        The Sacred Hearth
+      </a>
+
+      <h1 class="font-headline text-[2rem] font-black leading-tight tracking-tight text-primary">Enter your code</h1>
+      <p class="mt-3 font-body text-[15px] leading-relaxed text-on-surface-variant">The code expires in ten minutes.</p>
+
+      <p class="mt-4 font-body text-sm text-on-surface-variant">
+        Sent to <span id="contact-mask" class="font-semibold text-primary">your email</span>
+      </p>
+
+      <form id="otp-form" class="mt-8" novalidate>
+        <fieldset>
+          <legend class="sr-only">Six-digit code</legend>
+          <div class="grid grid-cols-6 gap-2 sm:gap-3">
+          <input id="otp-1" name="otp1" class="otp-input aspect-square w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest text-center font-headline text-2xl font-black text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" required aria-label="Digit 1"/>
+          <input id="otp-2" name="otp2" class="otp-input aspect-square w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest text-center font-headline text-2xl font-black text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" required aria-label="Digit 2"/>
+          <input id="otp-3" name="otp3" class="otp-input aspect-square w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest text-center font-headline text-2xl font-black text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" required aria-label="Digit 3"/>
+          <input id="otp-4" name="otp4" class="otp-input aspect-square w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest text-center font-headline text-2xl font-black text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" required aria-label="Digit 4"/>
+          <input id="otp-5" name="otp5" class="otp-input aspect-square w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest text-center font-headline text-2xl font-black text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" required aria-label="Digit 5"/>
+          <input id="otp-6" name="otp6" class="otp-input aspect-square w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest text-center font-headline text-2xl font-black text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" required aria-label="Digit 6"/>
+          </div>
+        </fieldset>
+
+        <div class="mt-8">
+        <button type="submit"
+          class="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 font-body text-base font-bold text-on-primary hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:opacity-60 transition-opacity">
+          Verify code
+          <span aria-hidden="true" class="inline-block transition-transform group-hover:translate-x-0.5">&rarr;</span>
         </button>
+        </div>
       </form>
 
-      <!-- Timer & Resend -->
-      <div class="mt-8 flex flex-col items-center gap-4">
-        <div class="flex items-center gap-2 px-4 py-2 bg-secondary-container/30 rounded-full">
-          <span class="material-symbols-outlined text-on-secondary-container text-sm">schedule</span>
-          <span class="text-on-secondary-container font-medium text-sm">
-            Resend code in <span id="timer-display" class="font-bold">02:44</span>
-          </span>
-        </div>
-        <button id="resend-btn" class="text-on-surface-variant hover:text-primary font-medium text-sm transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-          Didn't receive a code? <span class="underline decoration-outline-variant">Resend Code</span>
+      <div class="mt-7 flex flex-wrap items-center gap-x-2 gap-y-1 font-body text-sm text-on-surface-variant">
+        <span>Didn&rsquo;t get it?</span>
+        <button id="resend-btn" type="button" class="font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:text-on-surface-variant/60 disabled:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded" disabled>
+          Send a new code
         </button>
+        <span id="timer-display" class="tabular-nums text-on-surface-variant/70">2:00</span>
       </div>
-      
-    </div>
-  </section>
 
-  <!-- Footer Decoration -->
-  <footer class="mt-12 text-center">
-    <p class="text-on-surface-variant/60 text-xs font-medium tracking-widest uppercase">Okitipupa Digital Sanctuary • Administration Portal</p>
-    <div class="mt-8 flex justify-center gap-6">
-      <div class="w-12 h-1 bg-primary/10 rounded-full"></div>
-      <div class="w-12 h-1 bg-secondary/20 rounded-full"></div>
-      <div class="w-12 h-1 bg-primary/10 rounded-full"></div>
-    </div>
-  </footer>
-</main>
+      <a href="/admin/login" class="mt-7 inline-flex items-center gap-2 font-body text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded">
+        <span aria-hidden="true">&larr;</span> Back to sign in
+      </a>
 
-<!-- Side Decoration (Asymmetric Element) -->
-<div class="hidden lg:block absolute -right-20 top-1/2 -translate-y-1/2 opacity-20 rotate-12">
-  <div class="bg-surface-container-high p-4 rounded-3xl rotate-[-6deg]">
-    <img class="w-64 h-96 object-cover rounded-2xl grayscale hover:grayscale-0 transition-all duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIbPd4aMBMEUHWrpOUcfOzVRUwny5FxgSxRaLQUs3ND7sZqcWOFeGK5lmUF6PDufKkd9faOxfJkECQ8ji_zQFZeQoq9JQaMgOmv1yU0tc50epwJo-k-hSy5Td2wr3xUkAVnixIR2BLa0_8lc-zN3WpZhJTTdmAkQXy_T51cKmQisXkiKH8ag7KE4txZqNQDkqArkLBmR2ssxBgJ7K096QkcyT5BOwIsRRxhjEwakyhMjMZP6pXMBf-_1x575tE7U2PPl6RxRAnmiA" alt="Church interior with sunlight streaming through windows">
-  </div>
+    </div>
+  </main>
 </div>
 
 <script src="/js/utils/shared.js" defer></script>

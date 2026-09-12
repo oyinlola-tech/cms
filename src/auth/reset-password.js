@@ -73,35 +73,19 @@
         return;
       }
 
-      var submitBtn = form.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Resetting...';
+      var restore = shared.setButtonBusy(form.querySelector('button[type="submit"]'), 'Saving\u2026');
 
       api.post('/auth/reset-password', { token: token, newPassword: password }).then(function() {
         sessionStorage.removeItem('resetToken');
         sessionStorage.removeItem('resetEmail');
-        showToast('Password reset successful!', 'success');
+        showToast('Password updated. Sign in with your new password.', 'success');
         window.location.href = '/admin/login';
       }).catch(function(error) {
-        showToast(error.message || 'Failed to reset password', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Reset Password';
+        showToast(error.message || 'Could not reset the password. Request a new code.', 'error');
+        restore();
       });
     });
 
-    var toggleBtns = document.querySelectorAll('.toggle-password');
-    toggleBtns.forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var target = document.querySelector(this.getAttribute('data-target'));
-        if (target) {
-          if (target.type === 'password') {
-            target.type = 'text';
-          } else {
-            target.type = 'password';
-          }
-        }
-      });
-    });
   }
 
   CMS.authPages = CMS.authPages || {};

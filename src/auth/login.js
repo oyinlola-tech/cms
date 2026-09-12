@@ -17,17 +17,13 @@
       var email = formData.get('email');
       var password = formData.get('password');
 
-      var submitBtn = form.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Signing in...';
+      var restore = shared.setButtonBusy(form.querySelector('button[type="submit"]'), 'Signing in\u2026');
 
       auth.login(email, password).then(function() {
-        showToast('Login successful!', 'success');
-        window.location.href = '/admin';
+        window.location.href = '/admin/dashboard';
       }).catch(function(error) {
-        showToast(error.message || 'Login failed. Please check your credentials.', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Sign In';
+        showToast(error.message || 'Those details did not match an account.', 'error');
+        restore();
       });
     });
 

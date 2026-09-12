@@ -8,40 +8,95 @@
   
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script src="/js/tailwind-config.js"></script>
+  <link rel="stylesheet" href="/css/site.css"/>
   
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
   
-<style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    h1, h2, h3 { font-family: 'Noto Serif', serif; }
-    .material-symbols-outlined {
-      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    }
-  </style>
+
 </head>
 
 <body class="bg-surface text-on-surface" data-page="gallery">
 
 <!-- Top Navigation Bar -->
-<header class="bg-[#fbf9f5] sticky top-0 z-50 transition-colors duration-300">
-  <div class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
-    <div class="text-2xl font-bold text-[#002d1c] font-['Noto_Serif']">The Sacred Hearth</div>
-    
-    <!-- Desktop Navigation -->
-    <nav class="hidden md:flex gap-8 font-['Noto_Serif'] text-lg font-medium">
-      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/">Home</a>
-      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/programs">Programs</a>
-      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/announcements">Announcements</a>
-      <a class="text-[#735c00] border-b-2 border-[#735c00] pb-1" href="/gallery">Gallery</a>
-      <a class="text-[#002d1c] opacity-80 hover:text-[#735c00] transition-colors duration-300" href="/contact">Contact</a>
-    </nav>
-    
-    <a href="/admin/login" class="bg-primary text-on-primary px-6 py-2 rounded-full font-semibold hover:opacity-90 active:scale-95 transition-all">
-      Login
+<!-- Announcement bar: the next service, from the same schedule the footer uses. -->
+<div class="bg-primary text-on-primary">
+  <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-6 py-2 sm:px-8">
+    <p class="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-body text-xs">
+      <span class="font-black uppercase tracking-[0.18em] text-on-primary/40">Next service</span>
+      <span id="next-service" class="flex flex-wrap items-center gap-x-2">
+        <span class="font-bold text-secondary-container">Sunday</span>
+        <span class="text-on-primary/30" aria-hidden="true">&middot;</span>
+        <span>8:00 AM</span>
+        <span class="hidden text-on-primary/30 sm:inline" aria-hidden="true">&middot;</span>
+        <span class="hidden text-on-primary/60 sm:inline">Divine Worship</span>
+      </span>
+    </p>
+    <a href="/programs" class="hidden font-body text-xs font-bold text-on-primary/60 hover:text-secondary-container focus-visible:text-secondary-container focus-visible:outline-none transition-colors sm:inline">
+      See the week <span aria-hidden="true">&rarr;</span>
     </a>
   </div>
+</div>
+
+<header id="site-header" class="sticky top-0 z-50 border-b border-transparent bg-surface/90 backdrop-blur transition-shadow">
+  <div class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4 sm:px-8">
+    <a href="/" class="font-headline text-xl font-black tracking-tight text-primary sm:text-[1.6rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded">
+      The Sacred Hearth
+    </a>
+
+    <nav aria-label="Main" class="hidden items-center gap-9 md:flex">
+        <a data-nav-link href="/" class="nav-link font-body text-[15px] font-semibold text-on-surface/70 hover:text-primary focus-visible:text-primary focus-visible:outline-none transition-colors">Home</a>
+        <a data-nav-link href="/programs" class="nav-link font-body text-[15px] font-semibold text-on-surface/70 hover:text-primary focus-visible:text-primary focus-visible:outline-none transition-colors">Programs</a>
+        <a data-nav-link href="/announcements" class="nav-link font-body text-[15px] font-semibold text-on-surface/70 hover:text-primary focus-visible:text-primary focus-visible:outline-none transition-colors">Announcements</a>
+        <a data-nav-link href="/gallery" class="nav-link font-body text-[15px] font-semibold text-on-surface/70 hover:text-primary focus-visible:text-primary focus-visible:outline-none transition-colors">Gallery</a>
+        <a data-nav-link href="/contact" class="nav-link font-body text-[15px] font-semibold text-on-surface/70 hover:text-primary focus-visible:text-primary focus-visible:outline-none transition-colors">Contact</a>
+    </nav>
+
+    <div class="flex items-center gap-3">
+      <a href="/contact" class="hidden rounded-full border border-primary/20 px-5 py-2.5 font-body text-sm font-bold text-primary hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors sm:inline-flex">
+        Plan your visit
+      </a>
+
+      <button id="menu-open" type="button" aria-expanded="false" aria-controls="mobile-menu"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-full text-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors md:hidden">
+        <span class="sr-only">Open menu</span>
+        <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+      </button>
+    </div>
+  </div>
 </header>
+
+<!-- Full-screen menu. Mobile previously had no navigation at all. -->
+<div id="mobile-menu" class="fixed inset-0 z-[60] hidden flex-col bg-primary text-on-primary md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+  <div class="flex items-center justify-between px-6 py-4">
+    <span class="font-headline text-xl font-black">The Sacred Hearth</span>
+    <button id="menu-close" type="button"
+      class="inline-flex h-11 w-11 items-center justify-center rounded-full text-on-primary hover:bg-on-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-container transition-colors">
+      <span class="sr-only">Close menu</span>
+      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+    </button>
+  </div>
+
+  <nav aria-label="Main" class="flex-1 overflow-y-auto px-6 pb-10 pt-4">
+    <ul class="space-y-5 pl-5">
+          <li><a data-nav-link href="/" class="nav-link nav-link--stacked font-headline text-[clamp(1.75rem,9vw,2.75rem)] font-black leading-tight text-on-primary/85 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors">Home</a></li>
+          <li><a data-nav-link href="/programs" class="nav-link nav-link--stacked font-headline text-[clamp(1.75rem,9vw,2.75rem)] font-black leading-tight text-on-primary/85 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors">Programs</a></li>
+          <li><a data-nav-link href="/announcements" class="nav-link nav-link--stacked font-headline text-[clamp(1.75rem,9vw,2.75rem)] font-black leading-tight text-on-primary/85 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors">Announcements</a></li>
+          <li><a data-nav-link href="/gallery" class="nav-link nav-link--stacked font-headline text-[clamp(1.75rem,9vw,2.75rem)] font-black leading-tight text-on-primary/85 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors">Gallery</a></li>
+          <li><a data-nav-link href="/contact" class="nav-link nav-link--stacked font-headline text-[clamp(1.75rem,9vw,2.75rem)] font-black leading-tight text-on-primary/85 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors">Contact</a></li>
+    </ul>
+
+    <div class="mt-12 border-t border-on-primary/10 pt-8">
+      <p class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Next service</p>
+      <p id="menu-next-service" class="mt-3 font-headline text-2xl font-black text-secondary-container">Sunday 8:00 AM</p>
+      <p id="menu-next-name" class="mt-1 font-body text-sm text-on-primary/60">Divine Worship</p>
+
+      <a href="/contact" class="mt-7 inline-flex items-center gap-2 rounded-full bg-secondary-container px-7 py-3.5 font-body text-sm font-bold text-on-secondary-fixed hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-container focus-visible:ring-offset-2 focus-visible:ring-offset-primary transition-opacity">
+        Plan your visit <span aria-hidden="true">&rarr;</span>
+      </a>
+    </div>
+  </nav>
+</div>
 
 <main class="max-w-7xl mx-auto px-6 pt-12 pb-24">
   
@@ -203,6 +258,8 @@
 <script src="/js/utils/api.js" defer></script>
 <script src="/js/utils/auth.js" defer></script>
 <script src="/js/pages/gallery.js" defer></script>
+<script src="/js/schedule.js" defer></script>
+<script src="/js/nav.js" defer></script>
 <script src="/js/footer.js" defer></script>
 <script src="/js/page-init.js" defer></script>
 </body>

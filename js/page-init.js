@@ -38,15 +38,18 @@
       }
     }
 
-    // The footer's weekly rail is shared by every public page, so it is
-    // hydrated here rather than from each page module.
-    if (window.CMS.footer && typeof window.CMS.footer.init === 'function') {
-      try {
-        window.CMS.footer.init();
-      } catch (error) {
-        console.error('Footer init failed:', error);
+    // Site chrome shared by every public page - navigation and the footer's
+    // weekly rail - is set up here rather than from each page module.
+    ['nav', 'footer'].forEach(function (part) {
+      var module = window.CMS[part];
+      if (module && typeof module.init === 'function') {
+        try {
+          module.init();
+        } catch (error) {
+          console.error(part + ' init failed:', error);
+        }
       }
-    }
+    });
 
     var pageName = document.body ? document.body.getAttribute('data-page') : null;
     if (!pageName) return;

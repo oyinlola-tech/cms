@@ -432,7 +432,7 @@ test('the week rail marks exactly one upcoming service', async () => {
 
 test('the next-service calculation rolls over correctly', () => {
   const { window } = bootPage('public/index.html', { pathname: '/' });
-  const { nextOccurrence, relativeLabel, splitTime } = window.CMS.footer;
+  const { nextOccurrence, relativeLabel, splitTime } = window.CMS.schedule;
 
   // A Saturday morning: Sunday's 8am service is tomorrow.
   const saturday = new Date(2026, 8, 12, 9, 0, 0);
@@ -495,4 +495,192 @@ test('footer colour tokens all resolve against the shared Tailwind config', () =
       }
     }
   }
+});
+
+// --- Navigation and page chrome ---
+
+const PUBLIC_PAGES = PUBLIC_PAGES_WITH_FOOTER;
+
+function headerMarkup(file) {
+  const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const start = html.indexOf('<!-- Announcement bar');
+  // Cut at the close of the full-screen menu rather than at <main>, so a
+  // trailing comment on one page does not read as a different header.
+  const close = '  </nav>\n</div>';
+  const end = html.indexOf(close, start);
+  assert.ok(start !== -1 && end !== -1, `${file} has no recognisable header`);
+  return html.slice(start, end + close.length);
+}
+
+test('every public page carries the identical header', () => {
+  const variants = new Set(PUBLIC_PAGES.map(headerMarkup));
+  assert.equal(variants.size, 1, `expected one header version, found ${variants.size}`);
+});
+
+test('the admin sign-in link is not exposed anywhere on the public site', () => {
+  for (const file of PUBLIC_PAGES) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    assert.ok(!html.includes('/admin/login'), `${file} still links to the admin sign-in`);
+  }
+});
+
+test('the mobile menu opens, traps and releases correctly', async () => {
+  const { document, window } = bootPage('public/index.html', {
+    pathname: '/',
+    api: { '/programs/weekly-schedule': [] }
+  });
+  await settle();
+
+  const menu = document.getElementById('mobile-menu');
+  const openBtn = document.getElementById('menu-open');
+  const closeBtn = document.getElementById('menu-close');
+
+  // Mobile previously had no navigation at all: the links were `hidden md:flex`
+  // with nothing behind them.
+  assert.ok(menu && openBtn, 'mobile menu and trigger must exist');
+  assert.equal(menu.getAttribute('role'), 'dialog');
+  assert.equal(menu.getAttribute('aria-modal'), 'true');
+  assert.equal(openBtn.getAttribute('aria-controls'), 'mobile-menu');
+
+  await window.CMS.nav.init();
+
+  assert.ok(menu.classList.contains('hidden'), 'menu should start closed');
+  assert.equal(openBtn.getAttribute('aria-expanded'), 'false');
+
+  openBtn.click();
+  assert.ok(!menu.classList.contains('hidden'), 'trigger should open the menu');
+  assert.equal(openBtn.getAttribute('aria-expanded'), 'true');
+  assert.ok(document.body.classList.contains('overflow-hidden'), 'background scroll should lock');
+
+  document.dispatchEvent(Object.assign(new window.Event('keydown'), { key: 'Escape' }));
+  assert.ok(menu.classList.contains('hidden'), 'Escape should close the menu');
+  assert.ok(!document.body.classList.contains('overflow-hidden'), 'scroll lock should release');
+
+  openBtn.click();
+  closeBtn.click();
+  assert.ok(menu.classList.contains('hidden'), 'close button should work');
+});
+
+test('the current page is marked in the navigation', async () => {
+  const { document, window } = bootPage('public/pages/gallery.html', {
+    pathname: '/gallery',
+    api: { '/programs/weekly-schedule': [], '/gallery': { items: [], totalPages: 1, page: 1 } }
+  });
+  await window.CMS.nav.init();
+  await settle();
+
+  const current = document.querySelectorAll('[data-nav-link].is-current');
+  assert.ok(current.length > 0, 'the active link should be marked');
+  for (const link of current) {
+    assert.equal(link.getAttribute('href'), '/gallery');
+    assert.equal(link.getAttribute('aria-current'), 'page');
+  }
+
+  const other = document.querySelector('[data-nav-link][href="/contact"]');
+  assert.ok(!other.classList.contains('is-current'));
+});
+
+test('the announcement bar fills in the next service', async () => {
+  const { document, window } = bootPage('public/index.html', {
+    pathname: '/',
+    api: {
+      '/programs/weekly-schedule': [
+        { day_of_week: 'Sunday', program_name: 'Divine Worship', start_time: '08:00:00', display_order: 1 },
+        { day_of_week: 'Wednesday', program_name: 'Prayer Hour', start_time: '17:00:00', display_order: 2 }
+      ]
+    }
+  });
+
+  const slot = document.getElementById('next-service');
+  assert.ok(slot, 'the bar needs a slot to fill');
+  // It ships with a usable default so the bar is never empty without JS.
+  assert.match(slot.textContent, /\S/);
+
+  await window.CMS.nav.init();
+  await settle();
+  assert.match(slot.textContent, /Today|Tomorrow|In \d+ days/);
+});
+
+// --- Auth pages ---
+
+const AUTH_PAGES = [
+  ['src/auth/login.html', 'login', ['login-form', 'password']],
+  ['src/auth/forgot-password.html', 'forgotPassword', ['forgot-password-form']],
+  ['src/auth/verify-otp.html', 'verifyOTP', ['otp-form', 'timer-display', 'resend-btn', 'contact-mask']],
+  ['src/auth/reset-password.html', 'resetPassword', ['reset-password-form', 'confirm_password']]
+];
+
+test('auth pages share one shell and expose what their scripts need', () => {
+  for (const [file, page, ids] of AUTH_PAGES) {
+    const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    const { document } = parseHTML(html);
+
+    assert.equal(document.body.getAttribute('data-page'), page, `${file} data-page`);
+    assert.ok(html.includes('/css/site.css'), `${file} missing the shared stylesheet`);
+    assert.equal([...document.querySelectorAll('script')].filter((s) => !s.getAttribute('src')).length, 0,
+      `${file} has inline scripts`);
+
+    for (const id of ids) {
+      assert.ok(document.getElementById(id), `${file} is missing #${id}`);
+    }
+
+    // The split shell: a brand panel and the form, not a flex row that lets a
+    // stray sibling squeeze the card.
+    assert.ok(document.querySelector('.grid.min-h-screen'), `${file} is missing the split shell`);
+    assert.ok(document.querySelector('main'), `${file} is missing <main>`);
+  }
+});
+
+test('the sidebar normaliser only touches the dashboard sidebar', () => {
+  // Selecting "the first <aside> on any /admin path" also caught the sign-in
+  // page's brand panel and forced it to w-64/fixed, collapsing that layout.
+  for (const [file] of AUTH_PAGES) {
+    const { document, window } = bootPage(file, { pathname: '/admin/login' });
+    window.CMS.shared.normalizeAdminSidebar();
+    const aside = document.querySelector('aside');
+    assert.ok(aside, `${file} should have a brand panel`);
+    assert.ok(!aside.classList.contains('w-64'), `${file} brand panel was treated as a sidebar`);
+    assert.ok(!aside.classList.contains('fixed'), `${file} brand panel was pinned`);
+  }
+
+  const { document } = bootPage('src/pages/members.html', { pathname: '/admin/members' });
+  const sidebar = document.querySelector('aside[data-admin-sidebar]');
+  assert.ok(sidebar, 'the dashboard sidebar should be marked');
+  assert.ok(sidebar.classList.contains('w-64'), 'the dashboard sidebar should still be normalised');
+});
+
+test('password visibility toggles are wired on every auth page that has one', () => {
+  for (const [file] of AUTH_PAGES) {
+    const { document, window } = bootPage(file, { pathname: '/admin/login' });
+    const toggles = document.querySelectorAll('.toggle-password');
+    if (toggles.length === 0) continue;
+
+    window.CMS.shared.initPasswordToggles();
+
+    for (const toggle of toggles) {
+      const target = document.querySelector(toggle.getAttribute('data-target'));
+      assert.ok(target, `${file}: toggle points at a missing field`);
+      assert.equal(target.type, 'password');
+      toggle.dispatchEvent(new window.Event('click'));
+      assert.equal(target.type, 'text', `${file}: toggle did not reveal the password`);
+      toggle.dispatchEvent(new window.Event('click'));
+      assert.equal(target.type, 'password', `${file}: toggle did not hide the password again`);
+    }
+  }
+});
+
+test('setButtonBusy preserves the button markup it restores', () => {
+  const { document, window } = bootPage('src/auth/login.html', { pathname: '/admin/login' });
+  const button = document.querySelector('#login-form button[type="submit"]');
+  const before = button.innerHTML;
+
+  // Assigning to textContent (as the auth scripts used to) destroys the arrow
+  // inside the button and hard-codes the idle label in the script.
+  const restore = window.CMS.shared.setButtonBusy(button, 'Signing in…');
+  assert.equal(button.disabled, true);
+  assert.equal(button.textContent, 'Signing in…');
+
+  restore();
+  assert.equal(button.disabled, false);
+  assert.equal(button.innerHTML, before, 'the button markup should be restored intact');
 });

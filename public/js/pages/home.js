@@ -184,9 +184,28 @@
     });
   }
 
+  /**
+   * The hero photograph is hosted externally, so it can disappear without
+   * warning. If it fails, the arch falls back to a tonal panel rather than a
+   * broken-image icon. (An inline onerror attribute would be blocked by the
+   * CSP, so the handler is attached here.)
+   */
+  function initHeroImage() {
+    var frame = document.getElementById('hero-frame');
+    var image = document.getElementById('hero-image');
+    if (!frame || !image) return;
+
+    var fail = function () { frame.classList.add('is-empty'); };
+
+    image.addEventListener('error', fail);
+    // Covers the case where the image already failed before this ran.
+    if (image.complete && image.naturalWidth === 0) fail();
+  }
+
   CMS.pages = CMS.pages || {};
   CMS.pages.home = {
     init: function() {
+      initHeroImage();
       Promise.all([
         fetchHomeAnnouncements(),
         fetchHomePrograms(),

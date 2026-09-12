@@ -66,21 +66,17 @@
       e.preventDefault();
       var otp = Array.from(inputs).map(function(i) { return i.value; }).join('');
 
-      var submitBtn = form.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Verifying...';
+      var restore = shared.setButtonBusy(form.querySelector('button[type="submit"]'), 'Verifying\u2026');
 
       api.apiRequest('/auth/verify-otp', {
         method: 'POST',
         body: JSON.stringify({ email: email, otp: otp })
       }).then(function(data) {
         sessionStorage.setItem('resetToken', data.token);
-        showToast('OTP verified!', 'success');
         window.location.href = '/admin/reset-password';
       }).catch(function(error) {
-        showToast(error.message || 'Invalid OTP', 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Verify OTP';
+        showToast(error.message || 'That code is not valid or has expired.', 'error');
+        restore();
       });
     });
 
@@ -92,10 +88,10 @@
           method: 'POST',
           body: JSON.stringify({ email: email })
         }).then(function() {
-          showToast('OTP resent!', 'success');
+          showToast('A new code is on its way.', 'success');
           startCountdown();
         }).catch(function(error) {
-          showToast(error.message || 'Failed to resend OTP', 'error');
+          showToast(error.message || 'Could not send a new code. Try again.', 'error');
         });
       });
     }

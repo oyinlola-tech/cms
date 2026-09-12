@@ -1,0 +1,102 @@
+/**
+ * Site styles.
+ *
+ * Everything here is either something Tailwind utilities cannot express
+ * (pseudo-elements, masks) or something that was previously duplicated as an
+ * inline <style> block in every page.
+ */
+
+/* Material Symbols default axis settings. */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.editorial-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.5rem;
+}
+
+.glass-panel {
+  background: rgba(251, 249, 245, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ---------------------------------------------------------------- navigation
+ *
+ * Gold marks "here" in the navigation, the same way it marks "next" on the
+ * schedule. A dot rather than an underline: quieter, and it does not shift the
+ * text baseline when it appears.
+ */
+.nav-link {
+  position: relative;
+}
+
+.nav-link::before {
+  content: '';
+  position: absolute;
+  top: -0.6rem;
+  left: 50%;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 9999px;
+  background: var(--marker, #fed65b);
+  transform: translate(-50%, -0.25rem);
+  opacity: 0;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.nav-link.is-current::before {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* In the full-screen menu the links are large and left-aligned, so the marker
+   sits beside the word instead of above it. */
+.nav-link--stacked::before {
+  top: 50%;
+  left: -1.1rem;
+  transform: translate(-0.25rem, -50%);
+  width: 0.45rem;
+  height: 0.45rem;
+}
+
+.nav-link--stacked.is-current::before {
+  transform: translate(0, -50%);
+}
+
+/* ---------------------------------------------------------------------- hero
+ *
+ * The photograph is masked into an arch - a form taken from the building
+ * itself rather than an ornament laid on top of it.
+ */
+.arch-frame {
+  border-radius: 50% 50% 0.75rem 0.75rem / 38% 38% 0.75rem 0.75rem;
+  overflow: hidden;
+}
+
+/* Shown only if the photograph fails to load. */
+.arch-frame__fallback {
+  display: none;
+}
+
+.arch-frame.is-empty .arch-frame__fallback {
+  display: flex;
+}
+
+.arch-frame.is-empty img {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
