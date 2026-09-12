@@ -27,10 +27,10 @@
   }
 
   function renderFinanceSummary(data) {
-    var balanceEl = document.getElementById('finance-balance');
+    var balanceEl = document.getElementById('available-balance');
     var monthlyEl = document.getElementById('monthly-tithes');
-    var expensesEl = document.getElementById('monthly-expenses');
-    var trendEl = document.getElementById('donation-trend');
+    var expensesEl = document.getElementById('total-expenses');
+    var trendEl = document.getElementById('balance-change');
 
     if (balanceEl) balanceEl.textContent = formatCurrency(data.balance || 0);
     if (monthlyEl) monthlyEl.textContent = formatCurrency(data.monthlyTithes || 0);
@@ -58,7 +58,7 @@
   }
 
   function renderTransactions(transactions) {
-    var tbody = document.querySelector('#transactions-table tbody');
+    var tbody = document.getElementById('transactions-table-body');
     if (!tbody) return;
 
     if (!transactions || transactions.length === 0) {
@@ -82,7 +82,7 @@
   }
 
   function initSearch() {
-    var searchInput = document.getElementById('finance-search');
+    var searchInput = document.getElementById('transaction-search');
     if (!searchInput) return;
 
     var doSearch = debounce(function(value) {
@@ -171,12 +171,12 @@
   }
 
   function initCreateButtons() {
-    ['add-transaction-btn', 'new-transaction-btn', 'new-record-btn'].forEach(function(id) {
+    ['add-transaction-btn', 'new-transaction-btn'].forEach(function(id) {
       var btn = document.getElementById(id);
       if (btn) btn.addEventListener('click', openCreateTransaction);
     });
 
-    var exportBtn = document.getElementById('export-transactions-btn');
+    var exportBtn = document.getElementById('export-report-btn');
     if (exportBtn) {
       exportBtn.addEventListener('click', function() {
         exportTransactions();

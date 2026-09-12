@@ -24,6 +24,12 @@
 
     return api.apiRequest(url).then(function(data) {
       renderMembersTable(data.items || [], page === 1);
+      var info = document.getElementById('pagination-info');
+      if (info) {
+        info.textContent = data.total > 0
+          ? 'Showing ' + data.from + '-' + data.to + ' of ' + data.total
+          : 'No members';
+      }
       if (data.totalPages > 1) {
         renderPaginationControls(
           document.getElementById('pagination-controls'),
@@ -42,7 +48,7 @@
 
   function renderMembersTable(members, replace) {
     replace = replace !== false;
-    var tbody = document.querySelector('#members-table tbody');
+    var tbody = document.getElementById('members-table-body');
     if (!tbody) return;
 
     if (!members || members.length === 0) {

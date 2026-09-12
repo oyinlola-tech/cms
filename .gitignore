@@ -2,3 +2,5 @@ node_modules
 .env
 uploads
 .kilo
+# Scratch files from local verification runs
+*.tmp.js

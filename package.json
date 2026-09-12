@@ -18,19 +18,19 @@
     "url": "https://github.com/oyinlola-tech/cms/issues"
   },
   "homepage": "https://github.com/oyinlola-tech/cms#readme",
-  "description": "",
+  "description": "Church management system for The Sacred Hearth, Okitipupa Parish.",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.3.2",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "mysql2": "^3.22.2",
     "nodemailer": "^8.0.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "linkedom": "^0.18.11"
   }
 }

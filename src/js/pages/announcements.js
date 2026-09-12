@@ -8,68 +8,111 @@
   var escapeHtml = shared ? shared.escapeHtml : function(v) { return String(v || ''); };
   var formatDate = shared ? shared.formatDate : function(d) { return d; };
   var showToast = shared ? shared.showToast : function() {};
-  var openModal = shared ? shared.openModal : function() {};
-  var debounce = shared ? shared.debounce : function(fn) { return fn; };
-  var renderPaginationControls = shared ? shared.renderPaginationControls : function() {};
 
   var currentPage = 1;
+  var currentSearch = '';
+  var currentStatus = '';
 
-  function loadAnnouncements(page) {
-    page = page || 1;
-    return api.apiRequest('/admin/announcements?page=' + page).then(function(data) {
-      renderAnnouncementsTable(data.items || []);
-      if (data.totalPages > 1) {
-        renderPaginationControls(
-          document.getElementById('pagination-controls'),
-          data.page,
-          data.totalPages,
-          function(newPage) {
-            loadAnnouncements(newPage);
-          }
-        );
-      }
+  var STATUS_STYLES = {
+    published: 'bg-primary/10 text-primary',
+    draft: 'bg-surface-container-high text-on-surface-variant',
+    scheduled: 'bg-secondary-container text-on-secondary-container',
+    archived: 'bg-surface-container-high text-on-surface-variant opacity-70'
+  };
+
+  // ------------------------------------------------------------------- list
+
+  function loadAnnouncements(page, search, status) {
+    currentPage = page || 1;
+    if (search !== undefined) currentSearch = search;
+    if (status !== undefined) currentStatus = status;
+
+    var url = '/admin/announcements?page=' + currentPage;
+    if (currentSearch) url += '&search=' + encodeURIComponent(currentSearch);
+    if (currentStatus) url += '&status=' + encodeURIComponent(currentStatus);
+
+    return api.apiRequest(url).then(function(data) {
+      renderTable(data.items || []);
+      renderPagination(data);
     }).catch(function(error) {
       console.error('Failed to load announcements:', error);
+      showToast(error.message || 'Failed to load announcements', 'error');
     });
   }
 
-  function renderAnnouncementsTable(announcements) {
-    var tbody = document.querySelector('#announcements-table tbody');
+  function loadStats() {
+    return api.apiRequest('/admin/announcements/stats').then(function(stats) {
+      var map = {
+        'active-announcements-count': stats.published,
+        'draft-announcements-count': stats.draft,
+        'scheduled-announcements-count': stats.scheduled,
+        'total-reach-count': stats.totalReach
+      };
+      Object.keys(map).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = Number(map[id] || 0);
+      });
+    }).catch(function() { /* stats are decorative */ });
+  }
+
+  function renderPagination(data) {
+    var info = document.getElementById('pagination-info');
+    if (info) {
+      info.textContent = data.total > 0
+        ? 'Showing ' + data.from + '-' + data.to + ' of ' + data.total
+        : 'No announcements';
+    }
+
+    var controls = document.getElementById('pagination-controls');
+    if (controls && shared.renderPaginationControls) {
+      shared.renderPaginationControls(controls, data.page, data.totalPages, function(page) {
+        loadAnnouncements(page);
+      });
+    }
+  }
+
+  function renderTable(items) {
+    var tbody = document.getElementById('announcements-table-body');
     if (!tbody) return;
 
-    if (!announcements || announcements.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-on-surface-variant">No announcements found</td></tr>';
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-on-surface-variant">No announcements found</td></tr>';
       return;
     }
 
-    var html = '';
-    announcements.forEach(function(ann) {
-      var statusBadge = ann.status === 'published' ? 'bg-green-100 text-green-800' :
-                      ann.status === 'draft' ? 'bg-gray-100 text-gray-800' : 'bg-yellow-100 text-yellow-800';
-      html += '<tr>' +
-        '<td><img class="w-12 h-12 object-cover rounded" src="' + escapeHtml(ann.image_url || '/images/placeholder.svg') + '"></td>' +
-        '<td class="font-bold">' + escapeHtml(ann.title) + '</td>' +
-        '<td>' + escapeHtml(ann.category || '—') + '</td>' +
-        '<td><span class="px-2 py-1 rounded text-xs font-bold ' + statusBadge + '">' + escapeHtml(ann.status) + '</span></td>' +
-        '<td>' + formatDate(ann.created_at) + '</td>' +
-        '<td>' + (ann.views || 0) + '</td>' +
-        '<td>' +
-          '<button class="text-primary hover:underline text-sm mr-2 edit-announcement-btn" data-id="' + ann.id + '">Edit</button>' +
-          '<button class="text-error hover:underline text-sm delete-announcement-btn" data-id="' + ann.id + '">Delete</button>' +
+    tbody.innerHTML = items.map(function(item) {
+      var status = item.status || 'draft';
+      return '<tr class="hover:bg-surface-container-low transition-colors">' +
+        '<td class="px-6 py-4">' +
+          '<div class="font-bold text-sm text-primary">' + escapeHtml(item.title) + '</div>' +
+          '<div class="text-xs text-on-surface-variant line-clamp-1">' + escapeHtml(item.summary || '') + '</div>' +
+        '</td>' +
+        '<td class="px-6 py-4 text-sm">' + escapeHtml(item.category || 'General') + '</td>' +
+        '<td class="px-6 py-4">' +
+          '<span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ' + (STATUS_STYLES[status] || '') + '">' +
+            escapeHtml(status) +
+          '</span>' +
+        '</td>' +
+        '<td class="px-6 py-4 text-sm whitespace-nowrap text-on-surface-variant">' +
+          escapeHtml(formatDate(item.published_at || item.scheduled_for || item.created_at)) +
+        '</td>' +
+        '<td class="px-6 py-4 text-right whitespace-nowrap">' +
+          '<button type="button" class="text-primary hover:underline text-sm font-bold mr-3 edit-announcement-btn" data-id="' + item.id + '">Edit</button>' +
+          '<button type="button" class="text-error hover:underline text-sm font-bold delete-announcement-btn" data-id="' + item.id + '">Delete</button>' +
         '</td>' +
       '</tr>';
-    });
-    tbody.innerHTML = html;
+    }).join('');
 
-    document.querySelectorAll('.edit-announcement-btn').forEach(function(btn) {
+    // The edit handler used to be an empty stub ("// open edit modal").
+    tbody.querySelectorAll('.edit-announcement-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        openAnnouncementModal(Number(this.getAttribute('data-id')));
+        openModal(Number(this.getAttribute('data-id')));
       });
     });
 
-    document.querySelectorAll('.delete-announcement-btn').forEach(function(btn) {
+    tbody.querySelectorAll('.delete-announcement-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        var id = parseInt(this.getAttribute('data-id'));
+        var id = Number(this.getAttribute('data-id'));
         if (confirm('Are you sure you want to delete this announcement?')) {
           deleteAnnouncement(id);
         }
@@ -78,150 +121,228 @@
   }
 
   function deleteAnnouncement(id) {
-    return api.apiRequest('/admin/announcements/' + id, { method: 'DELETE' }).then(function() {
+    return api.delete('/admin/announcements/' + id).then(function() {
       showToast('Announcement deleted successfully', 'success');
       loadAnnouncements(currentPage);
+      loadStats();
     }).catch(function(error) {
       showToast(error.message || 'Failed to delete announcement', 'error');
     });
   }
 
-  function announcementFormHtml(item) {
-    item = item || {};
-    var dt = function(value) { return value ? String(value).replace(' ', 'T').slice(0, 16) : ''; };
-    var select = function(name, label, value, options) {
-      return '<div>' +
-        '<label class="block text-xs font-bold text-primary mb-1" for="a-' + name + '">' + label + '</label>' +
-        '<select id="a-' + name + '" name="' + name + '" class="w-full bg-surface-container-highest rounded-lg px-4 py-3">' +
-          options.map(function(opt) {
-            return '<option value="' + opt + '"' + (String(value) === opt ? ' selected' : '') + '>' + opt + '</option>';
-          }).join('') +
-        '</select>' +
-      '</div>';
-    };
+  // ------------------------------------------------------------------ modal
 
-    return '<div>' +
-        '<label class="block text-xs font-bold text-primary mb-1" for="a-title">Title</label>' +
-        '<input id="a-title" name="title" required minlength="3" maxlength="200" ' +
-          'class="w-full bg-surface-container-highest rounded-lg px-4 py-3" ' +
-          'value="' + escapeHtml(item.title || '') + '"/>' +
-      '</div>' +
-      '<div class="mt-4">' +
-        '<label class="block text-xs font-bold text-primary mb-1" for="a-summary">Summary</label>' +
-        '<input id="a-summary" name="summary" maxlength="300" ' +
-          'class="w-full bg-surface-container-highest rounded-lg px-4 py-3" ' +
-          'placeholder="Left blank, the first 160 characters of the body are used" ' +
-          'value="' + escapeHtml(item.summary || '') + '"/>' +
-      '</div>' +
-      '<div class="mt-4">' +
-        '<label class="block text-xs font-bold text-primary mb-1" for="a-content">Body</label>' +
-        '<textarea id="a-content" name="content" rows="8" maxlength="20000" ' +
-          'class="w-full bg-surface-container-highest rounded-lg px-4 py-3">' +
-          escapeHtml(item.content || '') +
-        '</textarea>' +
-        '<p class="text-xs text-on-surface-variant mt-1">Plain text. Blank lines start a new paragraph.</p>' +
-      '</div>' +
-      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">' +
-        select('status', 'Status', item.status || 'draft', ['draft', 'published', 'scheduled', 'archived']) +
-        select('priority', 'Priority', item.priority || 'normal', ['normal', 'high', 'urgent']) +
-        '<div>' +
-          '<label class="block text-xs font-bold text-primary mb-1" for="a-category">Category</label>' +
-          '<input id="a-category" name="category" maxlength="50" ' +
-            'class="w-full bg-surface-container-highest rounded-lg px-4 py-3" ' +
-            'value="' + escapeHtml(item.category || 'General') + '"/>' +
-        '</div>' +
-        '<div>' +
-          '<label class="block text-xs font-bold text-primary mb-1" for="a-scheduled">Publish at (scheduled only)</label>' +
-          '<input id="a-scheduled" name="scheduled_for" type="datetime-local" ' +
-            'class="w-full bg-surface-container-highest rounded-lg px-4 py-3" ' +
-            'value="' + dt(item.scheduled_for) + '"/>' +
-        '</div>' +
-      '</div>' +
-      '<div class="flex gap-6 mt-4">' +
-        '<label class="flex items-center gap-2 text-sm font-semibold">' +
-          '<input type="checkbox" name="is_new" ' + (item.is_new ? 'checked' : '') + '/> Mark as new</label>' +
-        '<label class="flex items-center gap-2 text-sm font-semibold">' +
-          '<input type="checkbox" name="is_featured" ' + (item.is_featured ? 'checked' : '') + '/> Featured</label>' +
-      '</div>';
+  function modalEl() { return document.getElementById('announcement-modal'); }
+
+  function setField(id, value) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = Boolean(value);
+    else el.value = value == null ? '' : value;
   }
 
-  function readAnnouncementForm(formData, overrideStatus) {
-    var value = function(name) {
-      var raw = formData.get(name);
-      return raw === null || String(raw).trim() === '' ? null : String(raw).trim();
-    };
-    var status = overrideStatus || value('status') || 'draft';
-
-    return {
-      title: value('title'),
-      summary: value('summary'),
-      content: value('content'),
-      category: value('category') || 'General',
-      priority: value('priority') || 'normal',
-      status: status,
-      scheduled_for: status === 'scheduled' ? value('scheduled_for') : null,
-      is_new: formData.get('is_new') === 'on',
-      is_featured: formData.get('is_featured') === 'on'
-    };
+  function getField(id) {
+    var el = document.getElementById(id);
+    if (!el) return null;
+    if (el.type === 'checkbox') return el.checked;
+    var value = String(el.value || '').trim();
+    return value === '' ? null : value;
   }
 
-  /**
-   * Create/edit modal. The edit handler was an empty stub and none of the
-   * "new announcement" buttons had listeners, so the POST/PUT endpoints were
-   * unreachable from the UI.
-   */
-  function openAnnouncementModal(id) {
-    var load = id ? api.apiRequest('/admin/announcements/' + id) : Promise.resolve(null);
+  function setPriority(priority) {
+    setField('announcement-priority', priority || 'normal');
+    var selector = document.getElementById('priority-selector');
+    if (!selector) return;
 
-    return load.then(function(item) {
-      shared.openModal({
-        title: id ? 'Edit announcement' : 'New announcement',
-        submitLabel: id ? 'Save changes' : 'Create',
-        contentHtml: announcementFormHtml(item),
-        onSubmit: function(formData, close) {
-          var payload = readAnnouncementForm(formData);
-          if (!payload.title || payload.title.length < 3) {
-            showToast('Title must be at least 3 characters', 'error');
-            return;
-          }
-          if (payload.status === 'scheduled' && !payload.scheduled_for) {
-            showToast('A scheduled announcement needs a publish date and time', 'error');
-            return;
-          }
+    selector.querySelectorAll('.priority-btn').forEach(function(btn) {
+      var active = btn.getAttribute('data-priority') === (priority || 'normal');
+      btn.classList.toggle('bg-surface', active);
+      btn.classList.toggle('text-primary', active);
+      btn.classList.toggle('shadow-sm', active);
+      btn.classList.toggle('text-on-surface-variant', !active);
+    });
+  }
 
-          var request = id
-            ? api.put('/admin/announcements/' + id, payload)
-            : api.post('/admin/announcements', payload);
+  function resetForm() {
+    var form = document.getElementById('announcement-form');
+    if (form) form.reset();
+    setField('announcement-id', '');
+    setPriority('normal');
+  }
 
-          return request.then(function() {
-            showToast(id ? 'Announcement updated' : 'Announcement created', 'success');
-            close();
-            loadAnnouncements(id ? currentPage : 1);
-          }).catch(function(error) {
-            showToast(error.message || 'Failed to save announcement', 'error');
-          });
-        }
-      });
+  function openModal(id) {
+    var modal = modalEl();
+    if (!modal) return Promise.resolve();
+
+    var heading = modal.querySelector('h3');
+    var show = function() {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.classList.add('overflow-hidden');
+    };
+
+    if (!id) {
+      resetForm();
+      if (heading) heading.textContent = 'New Announcement';
+      show();
+      return Promise.resolve();
+    }
+
+    return api.apiRequest('/admin/announcements/' + id).then(function(item) {
+      resetForm();
+      if (heading) heading.textContent = 'Edit Announcement';
+
+      setField('announcement-id', item.id);
+      setField('announcement-title', item.title);
+      setField('announcement-summary', item.summary);
+      setField('announcement-content', item.content);
+      setField('announcement-category', item.category || 'Admin');
+      setField('announcement-status', item.status || 'draft');
+      setField('announcement-image-url', item.image_url);
+      setPriority(item.priority || 'normal');
+
+      if (item.scheduled_for) {
+        setField('announcement-scheduled-for', String(item.scheduled_for).replace(' ', 'T').slice(0, 16));
+      }
+
+      show();
     }).catch(function(error) {
       showToast(error.message || 'Failed to load announcement', 'error');
     });
   }
 
-  function initCreateButtons() {
-    ['create-announcement-header-btn', 'new-announcement-sidebar-btn', 'fab-create-announcement', 'new-record-btn'].forEach(function(id) {
-      var btn = document.getElementById(id);
-      if (btn) btn.addEventListener('click', function() { openAnnouncementModal(null); });
+  function closeModal() {
+    var modal = modalEl();
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+    resetForm();
+  }
+
+  function collectPayload(overrideStatus) {
+    var status = overrideStatus || getField('announcement-status') || 'draft';
+    return {
+      title: getField('announcement-title'),
+      summary: getField('announcement-summary'),
+      content: getField('announcement-content'),
+      category: getField('announcement-category') || 'General',
+      priority: getField('announcement-priority') || 'normal',
+      status: status,
+      // Only a scheduled announcement carries a publish time.
+      scheduled_for: status === 'scheduled' ? getField('announcement-scheduled-for') : null,
+      image_url: getField('announcement-image-url')
+    };
+  }
+
+  function save(overrideStatus) {
+    var id = getField('announcement-id');
+    var payload = collectPayload(overrideStatus);
+
+    if (!payload.title || payload.title.length < 3) {
+      showToast('Title must be at least 3 characters', 'error');
+      return Promise.resolve();
+    }
+    if (payload.status === 'scheduled' && !payload.scheduled_for) {
+      showToast('A scheduled announcement needs a publish date and time', 'error');
+      return Promise.resolve();
+    }
+
+    var request = id
+      ? api.put('/admin/announcements/' + id, payload)
+      : api.post('/admin/announcements', payload);
+
+    return request.then(function() {
+      showToast(id ? 'Announcement updated' : 'Announcement created', 'success');
+      closeModal();
+      loadAnnouncements(id ? currentPage : 1);
+      loadStats();
+    }).catch(function(error) {
+      showToast(error.message || 'Failed to save announcement', 'error');
     });
+  }
+
+  // ------------------------------------------------------------------- init
+
+  function initModal() {
+    var form = document.getElementById('announcement-form');
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        // The submit button is "Publish"; the status field still wins if the
+        // editor explicitly chose scheduled or archived.
+        var chosen = getField('announcement-status');
+        save(chosen === 'draft' ? 'published' : chosen);
+      });
+    }
+
+    // "Save draft" had no handler at all.
+    var draftBtn = document.getElementById('save-draft-btn');
+    if (draftBtn) {
+      draftBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        save('draft');
+      });
+    }
+
+    var selector = document.getElementById('priority-selector');
+    if (selector) {
+      selector.addEventListener('click', function(e) {
+        var btn = e.target.closest('.priority-btn');
+        if (btn) setPriority(btn.getAttribute('data-priority'));
+      });
+    }
+
+    var statusSelect = document.getElementById('announcement-status');
+    var scheduledInput = document.getElementById('announcement-scheduled-for');
+    if (statusSelect && scheduledInput) {
+      var syncScheduled = function() {
+        scheduledInput.disabled = statusSelect.value !== 'scheduled';
+      };
+      statusSelect.addEventListener('change', syncScheduled);
+      syncScheduled();
+    }
+
+    var closeBtn = document.getElementById('close-modal-btn');
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+    var modal = modalEl();
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeModal();
+    });
+
+    // None of these create buttons had listeners before.
+    ['create-announcement-header-btn', 'new-announcement-sidebar-btn', 'fab-create-announcement'].forEach(function(id) {
+      var btn = document.getElementById(id);
+      if (btn) btn.addEventListener('click', function() { openModal(null); });
+    });
+  }
+
+  function initFilters() {
+    var search = document.getElementById('announcement-search');
+    if (search) {
+      var doSearch = shared.debounce(function(value) { loadAnnouncements(1, value); }, 400);
+      search.addEventListener('input', function() { doSearch(this.value); });
+    }
   }
 
   CMS.pages = CMS.pages || {};
   CMS.pages.announcementsAdmin = {
     init: function() {
       if (!auth.requireAuth()) return;
+      initModal();
+      initFilters();
       loadAnnouncements(1);
-      initCreateButtons();
+      loadStats();
     },
-    loadAnnouncements: loadAnnouncements
+    loadAnnouncements: loadAnnouncements,
+    openModal: openModal
   };
 
 })();

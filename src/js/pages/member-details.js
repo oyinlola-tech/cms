@@ -41,13 +41,11 @@
     setText('member-address', member.address || '\u2014');
     // The column is `dob`; `birthday` never existed on the record.
     setText('member-birthday', member.dob ? formatDate(member.dob) : '\u2014');
-    setText('member-type', member.member_type || 'Member');
-    setText('member-department', member.department || '\u2014');
-    setText('member-joined', member.joined_date ? formatDate(member.joined_date) : '\u2014');
+        setText('member-role', member.member_type || 'Member');
 
     if (profile) {
-      setText('member-giving-ytd', formatCurrency(profile.givingYtd || 0));
-      setText('member-attendance-rate', profile.attendanceRate === null || profile.attendanceRate === undefined
+      setText('total-giving-ytd', formatCurrency(profile.givingYtd || 0));
+      setText('attendance-rate', profile.attendanceRate === null || profile.attendanceRate === undefined
         ? '\u2014'
         : profile.attendanceRate + '%');
     }
@@ -70,7 +68,7 @@
   }
 
   function renderMemberTransactions(transactions) {
-    var tbody = document.querySelector('#transactions-table tbody');
+    var tbody = document.getElementById('recent-transactions-body');
     if (!tbody) return;
 
     if (!transactions || transactions.length === 0) {

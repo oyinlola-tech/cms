@@ -15,7 +15,8 @@ It contains:
 
 ## Security Features
 - **SQL Injection Protection**: All queries use parameterized statements with column whitelist validation
-- **RBAC**: Role-based access control (super_admin, admin, editor, viewer)
+- **RBAC**: Role-based access control (super_admin, admin, editor, viewer),
+  enforced per-endpoint via `requirePermission(...)` in every router
 - **Rate Limiting**: Comprehensive rate limiting on all endpoints
 - **Request ID**: Unique request IDs for tracing and debugging
 - **Activity Logging**: All CRUD operations are logged to the database
@@ -104,14 +105,16 @@ backend/
     admin-core.js        # Admin core routes (dashboard, settings, contact)
     auth.js              # Authentication routes
     finance.js           # Finance routes
-    members.js           # Members routes
+    members.js           # Members + attendance + household routes
     pages.js             # Page serving routes
     public.js            # Public API routes
+    users.js             # User account management (admin)
   services/
     email-service.js     # Email service (nodemailer)
+    scheduler.js         # Publishes scheduled announcements
     upload-service.js    # File upload service (multer)
   utils/
-    activity-log.js      # Activity logging
+    activity-log.js      # Audit trail written for every successful write
     async-handler.js     # Async error handler
     db.js                # Database query helper with transactions
     format.js            # Formatting utilities
@@ -205,7 +208,36 @@ Minimum required:
 - `/health` – Health check endpoint
 
 ## API Quick Reference
-All API routes are under `/api/v1`. Backward compatibility: `/api/*` redirects to `/api/v1/*`.
+### Security model
+
+- **Sessions**: JWTs carry a `purpose` claim and a `tv` (token version). Changing
+  or resetting a password, deactivating an account, or logging out increments
+  `token_version`, which immediately invalidates every token issued before it.
+  A password-reset token cannot be used as a session token, or vice versa.
+- **Authorization**: `authenticate` resolves the user and caches their role on
+  the request; `requirePermission('members:write')` and friends gate each route.
+  Roles are never trusted from the client.
+- **Input**: long-form fields are stored as plain text (`backend/utils/sanitize.js`).
+  Announcement bodies render through text nodes, so stored markup can never
+  execute. Enum columns are validated in the route before reaching MySQL.
+- **Uploads**: accepted files are re-checked against their magic bytes after
+  landing on disk, so a payload that merely claims to be a PNG is deleted.
+- **CSP**: `script-src` does not allow `'unsafe-inline'`. Page behaviour is
+  dispatched by `js/page-init.js` from a `data-page` attribute on `<body>`;
+  do not add inline `<script>` blocks.
+
+### Configuration that matters in production
+
+| Variable | Why |
+| --- | --- |
+| `JWT_SECRET` | Must be 32+ chars. Startup fails otherwise. |
+| `CORS_ORIGIN` | Must list at least one origin. An empty list reflects any origin, so startup fails in production. |
+| `TRUST_PROXY_HOPS` | Number of proxies in front of the app. Leave at `0` when exposed directly, or clients can spoof their IP and evade rate limits. |
+| `ADMIN_PASSWORD` | Bootstraps the first `super_admin`. Weak values fail startup in production. |
+
+All API routes are under `/api/v1`, which is what the frontend calls. The same
+router is also mounted at `/api/*` for backward compatibility - it is a second
+mount of the identical handlers, not a redirect, so both prefixes behave the same.
 
 Public:
 - `GET /api/v1/announcements`
@@ -223,21 +255,59 @@ Admin (requires `Authorization: Bearer <token>`):
 - `POST /api/v1/auth/verify-otp`
 - `POST /api/v1/auth/reset-password`
 - `POST /api/v1/auth/change-password`
+- `POST /api/v1/auth/logout` (revokes every token for the user)
 - `PUT /api/v1/auth/profile`
 - `GET /api/v1/dashboard/stats`
+- `GET /api/v1/dashboard/donation-trends`
 - `GET /api/v1/dashboard/recent-activity`
 - `GET /api/v1/dashboard/upcoming-event`
+
+Members (`members:read` / `members:write` / `members:delete`):
 - `GET /api/v1/members`
+- `GET /api/v1/members/stats`
+- `GET /api/v1/members/lookup`
 - `GET /api/v1/members/:id`
 - `GET /api/v1/members/:id/profile`
+- `GET /api/v1/members/:id/transactions`
+- `GET /api/v1/members/:id/attendance`
+- `POST /api/v1/members/:id/attendance`
+- `DELETE /api/v1/members/:id/attendance/:attendanceId`
+- `GET /api/v1/members/:id/household`
+- `POST /api/v1/members/:id/household`
+- `DELETE /api/v1/members/:id/household/:relatedId`
+- `POST /api/v1/members/:id/avatar` (multipart form: `avatar`)
 - `POST /api/v1/members`
 - `PUT /api/v1/members/:id`
 - `DELETE /api/v1/members/:id`
+
+Finance (`finance:read` / `finance:write` / `finance:export`):
 - `GET /api/v1/finance/summary`
 - `GET /api/v1/finance/transactions`
 - `POST /api/v1/finance/transactions`
+- `PUT /api/v1/finance/transactions/:id`
+- `DELETE /api/v1/finance/transactions/:id`
 - `GET /api/v1/finance/export` (CSV)
-- `POST /api/v1/admin/gallery` (multipart form: `image`)
+
+Content (`programs:*` / `announcements:*` / `gallery:*`):
+- `GET|POST /api/v1/admin/programs`, `GET|PUT|DELETE /api/v1/admin/programs/:id`
+- `GET /api/v1/admin/programs/stats`
+- `GET|POST /api/v1/admin/announcements`, `GET|PUT|DELETE /api/v1/admin/announcements/:id`
+- `GET /api/v1/admin/announcements/stats`
+- `GET /api/v1/admin/gallery`, `GET|PUT|DELETE /api/v1/admin/gallery/:id`
+- `GET /api/v1/admin/gallery/stats`
+- `POST /api/v1/admin/gallery` (multipart form: `image`, one file per request)
+
+Settings and inbox (`settings:*` / `contact:*`):
+- `GET|PUT /api/v1/admin/settings/links`
+- `GET /api/v1/admin/contact/messages`
+- `PUT /api/v1/admin/contact/messages/:id/read`
+- `POST /api/v1/admin/contact/messages/:id/reply`
+
+User accounts (`users:read` / `users:write` / `users:delete`):
+- `GET /api/v1/admin/users`
+- `POST /api/v1/admin/users`
+- `PUT /api/v1/admin/users/:id`
+- `DELETE /api/v1/admin/users/:id`
 
 ## Role-Based Access Control (RBAC)
 The system supports four roles with different permission levels:
@@ -249,13 +319,37 @@ The system supports four roles with different permission levels:
 | **editor** | Read members/finance, write programs/announcements/gallery |
 | **viewer** | Read-only access to all features |
 
-Default admin user is created with `super_admin` role.
+The bootstrap account from `ADMIN_EMAIL` is created with the `super_admin` role.
+Further accounts are managed from **Admin -> Users**.
+
+A user can never create, promote, or delete an account at or above their own
+role, and the last active administrator cannot be deleted.
+
+## Background jobs
+
+`backend/services/scheduler.js` runs on an interval and promotes announcements
+whose `scheduled_for` time has passed to `published`. It starts with the server
+and stops during graceful shutdown.
+
+## Testing
+
+```bash
+npm test
+```
+
+`test/app.test.js` boots the real router stack against a database double and
+covers auth, RBAC, and the public API. `test/frontend.test.js` loads each HTML
+page with `linkedom`, runs its real scripts, and asserts that selectors resolve,
+handlers bind, and form payloads match the API contract.
 
 ## Production Checklist
 - Set `NODE_ENV=production`
-- Set a strong `JWT_SECRET` (32+ chars)
-- Set `CORS_ORIGIN` to your real domain(s)
+- Set a strong `JWT_SECRET` (32+ chars) - startup fails otherwise
+- Set `CORS_ORIGIN` to your real domain(s) - startup fails if empty
+- Set `TRUST_PROXY_HOPS` to the number of proxies in front of the app
+- Set a strong `ADMIN_PASSWORD` (10+ chars) before first run
 - Configure SMTP (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, etc.) for OTP email delivery
+- Serve over HTTPS; HSTS is sent automatically in production
 - Use HTTPS (reverse proxy)
 - Back up MySQL regularly
 - Restrict server/network access to MySQL

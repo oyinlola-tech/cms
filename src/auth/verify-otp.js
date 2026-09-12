@@ -10,8 +10,8 @@
   var timerInterval;
 
   function startCountdown() {
-    var display = document.getElementById('countdown-display');
-    var resendBtn = document.getElementById('resend-otp-btn');
+    var display = document.getElementById('timer-display');
+    var resendBtn = document.getElementById('resend-btn');
     if (!display) return;
 
     countdown = 120;
@@ -39,12 +39,12 @@
     }
 
     var maskedEmail = email.replace(/(\w{1,3})\w+(@\w+)/, '$1***$2');
-    var emailDisplay = document.getElementById('masked-email');
+    var emailDisplay = document.getElementById('contact-mask');
     if (emailDisplay) emailDisplay.textContent = maskedEmail;
 
     startCountdown();
 
-    var form = document.getElementById('verify-otp-form');
+    var form = document.getElementById('otp-form');
     if (!form) return;
 
     var inputs = form.querySelectorAll('.otp-input');
@@ -84,7 +84,7 @@
       });
     });
 
-    var resendBtn = document.getElementById('resend-otp-btn');
+    var resendBtn = document.getElementById('resend-btn');
     if (resendBtn) {
       resendBtn.disabled = true;
       resendBtn.addEventListener('click', function() {

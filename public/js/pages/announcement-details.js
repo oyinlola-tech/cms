@@ -71,12 +71,16 @@
   function renderAnnouncement(ann) {
     var titleEl = document.getElementById('announcement-title');
     var contentEl = document.getElementById('announcement-content');
-    var metaEl = document.getElementById('announcement-meta');
+    var categoryEl = document.getElementById('announcement-category');
+    var dateEl = document.getElementById('announcement-date');
+    var summaryEl = document.getElementById('announcement-summary');
     var imageEl = document.getElementById('announcement-image');
 
     if (titleEl) titleEl.textContent = ann.title || '';
     if (contentEl) renderContent(contentEl, ann.content || ann.summary || '');
-    if (metaEl) metaEl.textContent = formatDate(ann.created_at) + (ann.category ? ' \u2022 ' + ann.category : '');
+    if (categoryEl) categoryEl.textContent = ann.category || 'Announcement';
+    if (dateEl) dateEl.textContent = formatDate(ann.published_at || ann.created_at);
+    if (summaryEl) summaryEl.textContent = ann.summary || '';
 
     if (imageEl) {
       if (isSafeImageUrl(ann.image_url)) {

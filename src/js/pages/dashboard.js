@@ -24,7 +24,7 @@
 
   function loadDonationChart() {
     return api.apiRequest('/dashboard/donation-trends').then(function(data) {
-      var container = document.getElementById('donation-chart');
+      var container = document.getElementById('donation-chart-container');
       if (!container) return;
     }).catch(function(error) {
       console.error('Failed to load donation chart:', error);
@@ -33,7 +33,7 @@
 
   function loadRecentActivity() {
     return api.apiRequest('/dashboard/recent-activity').then(function(data) {
-      var container = document.getElementById('recent-activity');
+      var container = document.getElementById('activity-feed');
       if (!container) return;
       if (!data || data.length === 0) {
         container.innerHTML = '<p class="text-on-surface-variant text-sm">No recent activity</p>';
@@ -60,7 +60,7 @@
 
   function loadUpcomingEvent() {
     return api.apiRequest('/dashboard/upcoming-event').then(function(data) {
-      var container = document.getElementById('upcoming-event');
+      var container = document.getElementById('upcoming-event-card');
       if (!container) return;
       if (!data) {
         container.innerHTML = '<p class="text-on-surface-variant">No upcoming events</p>';
