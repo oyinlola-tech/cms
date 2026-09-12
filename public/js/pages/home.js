@@ -67,57 +67,78 @@
   function renderHomePrograms(programs) {
     var container = document.getElementById('programs-container');
     if (!container) return;
-    if (!programs || programs.length < 3) {
+
+    // Previously this required at least 3 programs, so a parish with one or
+    // two upcoming programs saw "coming soon" instead of its own schedule -
+    // and the renderer then indexed programs[1] and programs[2] unguarded,
+    // which would have thrown had the guard been relaxed on its own.
+    if (!programs || programs.length === 0) {
       container.innerHTML = '<p class="col-span-3 text-center text-on-surface-variant py-12">Program schedule coming soon.</p>';
       return;
     }
 
     var iconMap = {
-      'devotion': 'event',
-      'service': 'church',
-      'fellowship': 'groups',
-      'bible_study': 'menu_book'
+      devotion: 'event',
+      service: 'church',
+      fellowship: 'groups',
+      bible_study: 'menu_book',
+      outreach: 'volunteer_activism',
+      youth: 'diversity_3'
     };
 
-    var prog1 = programs[0];
-    var prog2 = programs[1];
-    var prog3 = programs[2];
+    // The middle card is the highlighted one. With a single program that is
+    // the only card; otherwise prefer whichever program is the main service.
+    var featuredIndex = 0;
+    for (var i = 0; i < programs.length; i++) {
+      if (programs[i].is_main_service) { featuredIndex = i; break; }
+      if (i === 1) featuredIndex = 1;
+    }
+    if (programs.length >= 3 && !programs.some(function(p) { return p.is_main_service; })) {
+      featuredIndex = 1;
+    }
 
-    container.innerHTML = '<div class="bg-surface-container-lowest rounded-xl p-8 space-y-6 transform md:-translate-y-4">' +
-      '<div class="w-14 h-14 bg-secondary-container flex items-center justify-center rounded-xl">' +
-        '<span class="material-symbols-outlined text-on-secondary-container text-3xl">' + (iconMap[prog1.type] || 'event') + '</span>' +
-      '</div>' +
-      '<h3 class="font-headline text-2xl font-bold text-primary">' + escapeHtml(prog1.title) + '</h3>' +
-      '<p class="text-on-surface-variant">' + escapeHtml(prog1.description) + '</p>' +
-      '<div class="pt-4 border-t border-outline-variant/30 flex items-center gap-3">' +
-        '<span class="material-symbols-outlined text-secondary">schedule</span>' +
-        '<span class="text-sm font-semibold">' + escapeHtml(prog1.schedule) + '</span>' +
-      '</div>' +
-    '</div>' +
-    '<div class="bg-primary text-on-primary rounded-xl p-8 space-y-6 shadow-2xl scale-105 z-10 relative">' +
-      '<div class="absolute -top-4 -right-4 bg-secondary-container text-on-secondary-fixed px-4 py-2 rounded-lg font-black text-xs uppercase">Main Service</div>' +
-      '<div class="w-14 h-14 bg-surface-container-highest flex items-center justify-center rounded-xl">' +
-        '<span class="material-symbols-outlined text-primary text-3xl">' + (iconMap[prog2.type] || 'church') + '</span>' +
-      '</div>' +
-      '<h3 class="font-headline text-2xl font-bold">' + escapeHtml(prog2.title) + '</h3>' +
-      '<p class="opacity-80">' + escapeHtml(prog2.description) + '</p>' +
-      '<div class="pt-4 border-t border-on-primary/20 flex items-center gap-3">' +
-        '<span class="material-symbols-outlined text-secondary-fixed">schedule</span>' +
-        '<span class="text-sm font-semibold">' + escapeHtml(prog2.schedule) + '</span>' +
-      '</div>' +
-      '<button class="w-full py-3 bg-secondary-container text-on-secondary-fixed rounded-xl font-bold mt-4 hover:bg-secondary-fixed transition-colors">Plan Your Visit</button>' +
-    '</div>' +
-    '<div class="bg-surface-container-lowest rounded-xl p-8 space-y-6 transform md:translate-y-8">' +
-      '<div class="w-14 h-14 bg-secondary-container flex items-center justify-center rounded-xl">' +
-        '<span class="material-symbols-outlined text-on-secondary-container text-3xl">' + (iconMap[prog3.type] || 'groups') + '</span>' +
-      '</div>' +
-      '<h3 class="font-headline text-2xl font-bold text-primary">' + escapeHtml(prog3.title) + '</h3>' +
-      '<p class="text-on-surface-variant">' + escapeHtml(prog3.description) + '</p>' +
-      '<div class="pt-4 border-t border-outline-variant/30 flex items-center gap-3">' +
-        '<span class="material-symbols-outlined text-secondary">schedule</span>' +
-        '<span class="text-sm font-semibold">' + escapeHtml(prog3.schedule) + '</span>' +
-      '</div>' +
-    '</div>';
+    var offsets = ['md:-translate-y-4', '', 'md:translate-y-8'];
+
+    container.innerHTML = programs.map(function(program, index) {
+      var icon = iconMap[program.type] || 'event';
+      var schedule = program.schedule
+        || (program.start_datetime ? formatDate(program.start_datetime) + ' \u00b7 ' + formatTime(program.start_datetime) : '');
+      var description = program.description || '';
+
+      if (index === featuredIndex) {
+        return '<div class="bg-primary text-on-primary rounded-xl p-8 space-y-6 shadow-2xl md:scale-105 z-10 relative">' +
+            (program.is_main_service
+              ? '<div class="absolute -top-4 -right-4 bg-secondary-container text-on-secondary-fixed px-4 py-2 rounded-lg font-black text-xs uppercase">Main Service</div>'
+              : '') +
+            '<div class="w-14 h-14 bg-surface-container-highest flex items-center justify-center rounded-xl">' +
+              '<span class="material-symbols-outlined text-primary text-3xl">' + icon + '</span>' +
+            '</div>' +
+            '<h3 class="font-headline text-2xl font-bold">' + escapeHtml(program.title) + '</h3>' +
+            '<p class="opacity-80">' + escapeHtml(description) + '</p>' +
+            (schedule
+              ? '<div class="pt-4 border-t border-on-primary/20 flex items-center gap-3">' +
+                  '<span class="material-symbols-outlined text-secondary-fixed">schedule</span>' +
+                  '<span class="text-sm font-semibold">' + escapeHtml(schedule) + '</span>' +
+                '</div>'
+              : '') +
+            '<a href="/contact" class="block text-center w-full py-3 bg-secondary-container text-on-secondary-fixed rounded-xl font-bold mt-4 hover:bg-secondary-fixed transition-colors">Plan Your Visit</a>' +
+          '</div>';
+      }
+
+      return '<div class="bg-surface-container-lowest rounded-xl p-8 space-y-6 transform ' + (offsets[index] || '') + '">' +
+          '<div class="w-14 h-14 bg-secondary-container flex items-center justify-center rounded-xl">' +
+            '<span class="material-symbols-outlined text-on-secondary-container text-3xl">' + icon + '</span>' +
+          '</div>' +
+          '<h3 class="font-headline text-2xl font-bold text-primary">' + escapeHtml(program.title) + '</h3>' +
+          '<p class="text-on-surface-variant">' + escapeHtml(description) + '</p>' +
+          (schedule
+            ? '<div class="pt-4 border-t border-outline-variant/30 flex items-center gap-3">' +
+                '<span class="material-symbols-outlined text-secondary">schedule</span>' +
+                '<span class="text-sm font-semibold">' + escapeHtml(schedule) + '</span>' +
+              '</div>'
+            : '') +
+        '</div>';
+    }).join('');
   }
 
   function fetchHomeGallery() {
@@ -166,7 +187,6 @@
   CMS.pages = CMS.pages || {};
   CMS.pages.home = {
     init: function() {
-      shared.init();
       Promise.all([
         fetchHomeAnnouncements(),
         fetchHomePrograms(),

@@ -65,8 +65,11 @@
         return;
       }
 
-      if (password.length < 8) {
-        showToast('Password must be at least 8 characters', 'error');
+      // Match the server policy exactly so the form cannot submit something
+      // the API will reject with a generic error.
+      var errors = shared.validatePasswordStrength(password);
+      if (errors.length > 0) {
+        showToast(errors[0], 'error');
         return;
       }
 
@@ -74,10 +77,7 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Resetting...';
 
-      api.apiRequest('/auth/reset-password', {
-        method: 'POST',
-        body: JSON.stringify({ token: token, newPassword: password })
-      }).then(function() {
+      api.post('/auth/reset-password', { token: token, newPassword: password }).then(function() {
         sessionStorage.removeItem('resetToken');
         sessionStorage.removeItem('resetEmail');
         showToast('Password reset successful!', 'success');

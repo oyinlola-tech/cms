@@ -35,6 +35,9 @@
       var data = {
         name: formData.get('name'),
         email: formData.get('email'),
+        // The form collects a phone number and the API accepts one, but it was
+        // never included in the payload.
+        phone: formData.get('phone') || undefined,
         subject: formData.get('subject'),
         message: formData.get('message')
       };
@@ -43,10 +46,7 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Sending...';
 
-      api.apiRequest('/contact/send', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      }).then(function(response) {
+      api.post('/contact/send', data).then(function(response) {
         showToast('Message sent successfully! We\'ll get back to you soon.', 'success');
         form.reset();
       }).catch(function(error) {
@@ -67,7 +67,6 @@
   CMS.pages = CMS.pages || {};
   CMS.pages.contact = {
     init: function() {
-      shared.init();
       loadChurchInfo();
       initContactForm();
     },

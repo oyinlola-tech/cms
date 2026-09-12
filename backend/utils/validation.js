@@ -58,8 +58,44 @@ function getPasswordStrengthErrors(password) {
 }
 
 function parseId(value) {
-  const parsed = Number.parseInt(String(value), 10);
-  return Number.isFinite(parsed) ? parsed : null;
+  // Accept only a run of digits, so "-5", "12abc" and "1e3" are rejected rather
+  // than silently coerced into a lookup for a different row.
+  const raw = String(value ?? '').trim();
+  if (!/^\d+$/.test(raw)) return null;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return null;
+  return parsed;
+}
+
+/**
+ * Validates a YYYY-MM-DD date string, rejecting impossible calendar dates.
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isValidDateString(value) {
+  if (typeof value !== 'string') return false;
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const date = new Date(`${year}-${month}-${day}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.getUTCFullYear() === Number(year)
+    && date.getUTCMonth() + 1 === Number(month)
+    && date.getUTCDate() === Number(day);
+}
+
+/**
+ * Validates a datetime string accepted by MySQL DATETIME columns
+ * (YYYY-MM-DD, optionally followed by a time).
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isValidDateTimeString(value) {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{4}-\d{2}-\d{2})([T ]\d{2}:\d{2}(:\d{2})?)?$/);
+  if (!match) return false;
+  return isValidDateString(match[1]);
 }
 
 function parsePage(value, fallback = 1) {
@@ -139,6 +175,8 @@ module.exports = {
   buildSafeUpdateSet,
   ensureString,
   getPasswordStrengthErrors,
+  isValidDateString,
+  isValidDateTimeString,
   isStrongEnoughPassword,
   isValidEmail,
   parseBooleanFlag,

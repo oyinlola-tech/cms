@@ -18,26 +18,47 @@
 
   function loadMemberProfile(id) {
     return api.apiRequest('/members/' + id + '/profile').then(function(data) {
-      renderMemberProfile(data);
+      // The endpoint wraps the record: { member, givingYtd, ... }.
+      renderMemberProfile(data.member || {}, data);
     }).catch(function(error) {
       console.error('Failed to load member:', error);
+      showToast(error.message || 'Failed to load member', 'error');
     });
   }
 
-  function renderMemberProfile(member) {
-    var nameEl = document.getElementById('member-name');
-    var emailEl = document.getElementById('member-email');
-    var phoneEl = document.getElementById('member-phone');
-    var addressEl = document.getElementById('member-address');
-    var birthdayEl = document.getElementById('member-birthday');
-    var memberTypeEl = document.getElementById('member-type');
+  function renderMemberProfile(member, profile) {
+    var setText = function(id, value) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
 
-    if (nameEl) nameEl.textContent = member.name || '';
-    if (emailEl) emailEl.textContent = member.email || '—';
-    if (phoneEl) phoneEl.textContent = member.phone || '—';
-    if (addressEl) addressEl.textContent = member.address || '—';
-    if (birthdayEl) birthdayEl.textContent = member.birthday ? formatDate(member.birthday) : '—';
-    if (memberTypeEl) memberTypeEl.textContent = member.member_type || 'Member';
+    // The API returns first_name/last_name, not a combined `name`.
+    var fullName = [member.first_name, member.last_name].filter(Boolean).join(' ');
+
+    setText('member-name', fullName || member.name || 'Unknown member');
+    setText('member-email', member.email || '\u2014');
+    setText('member-phone', member.phone || '\u2014');
+    setText('member-address', member.address || '\u2014');
+    // The column is `dob`; `birthday` never existed on the record.
+    setText('member-birthday', member.dob ? formatDate(member.dob) : '\u2014');
+    setText('member-type', member.member_type || 'Member');
+    setText('member-department', member.department || '\u2014');
+    setText('member-joined', member.joined_date ? formatDate(member.joined_date) : '\u2014');
+
+    if (profile) {
+      setText('member-giving-ytd', formatCurrency(profile.givingYtd || 0));
+      setText('member-attendance-rate', profile.attendanceRate === null || profile.attendanceRate === undefined
+        ? '\u2014'
+        : profile.attendanceRate + '%');
+    }
+
+    var avatarEl = document.getElementById('member-avatar');
+    if (avatarEl) {
+      avatarEl.src = member.avatar || '/images/default-avatar.svg';
+      avatarEl.alt = fullName ? fullName + ' avatar' : 'Member avatar';
+    }
+
+    if (fullName) document.title = fullName + ' - Members';
   }
 
   function loadMemberTransactions(id) {
@@ -88,11 +109,19 @@
       return;
     }
 
-    container.innerHTML = '<div class="flex gap-1">' +
-      attendance.map(function(a) {
-        return '<div class="w-4 h-4 rounded-sm ' + (a.present ? 'bg-primary' : 'bg-surface-container-low') + '" title="' + formatDate(a.date) + '"></div>';
-      }).join('') +
-    '</div>';
+    container.textContent = '';
+    var strip = document.createElement('div');
+    strip.className = 'flex gap-1 flex-wrap';
+
+    attendance.forEach(function(a) {
+      var present = a.present === true || a.status === 'present';
+      var cell = document.createElement('div');
+      cell.className = 'w-4 h-4 rounded-sm ' + (present ? 'bg-primary' : 'bg-surface-container-low');
+      cell.title = formatDate(a.date) + ' - ' + (a.status || (present ? 'present' : 'absent'));
+      strip.appendChild(cell);
+    });
+
+    container.appendChild(strip);
   }
 
   function initMemberDetails(id) {

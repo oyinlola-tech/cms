@@ -2,6 +2,9 @@ const express = require('express');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
 const { isValidEmail, parseId, parseLimit, parsePage } = require('../utils/validation');
+const { sanitizeContent, sanitizeLine } = require('../utils/sanitize');
+
+const PUBLIC_PROGRAM_STATUSES = new Set(['upcoming', 'ongoing', 'completed', 'cancelled']);
 
 function createPublicRouter({ db, rateLimiters }) {
   const router = express.Router();
@@ -11,7 +14,9 @@ function createPublicRouter({ db, rateLimiters }) {
     const limit = parseLimit(req.query.limit, 10, 50);
     const page = parsePage(req.query.page, 1);
     const offset = (page - 1) * limit;
-    const status = typeof req.query.status === 'string' && req.query.status.trim() ? req.query.status.trim() : 'published';
+    // This is an unauthenticated endpoint, so the status is pinned to
+    // 'published'. Honouring ?status=draft here would leak unpublished content.
+    const status = 'published';
     const category = typeof req.query.category === 'string' && req.query.category !== 'all' ? req.query.category.trim() : null;
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
 
@@ -56,7 +61,12 @@ function createPublicRouter({ db, rateLimiters }) {
       res.status(400).json({ message: 'Invalid announcement id' });
       return;
     }
-    const results = await query(db, 'SELECT * FROM announcements WHERE id = ?', [id]);
+    const results = await query(
+      db,
+      `SELECT id, title, summary, content, category, image_url, priority, is_new, is_featured, published_at, created_at
+       FROM announcements WHERE id = ? AND status = 'published'`,
+      [id]
+    );
     if (results.length === 0) {
       res.status(404).json({ message: 'Not found' });
       return;
@@ -67,7 +77,8 @@ function createPublicRouter({ db, rateLimiters }) {
   router.get('/programs', readLimiter, asyncHandler(async (req, res) => {
     const limit = parseLimit(req.query.limit, 10, 50);
     const rawStatus = typeof req.query.status === 'string' && req.query.status.trim() ? req.query.status.trim() : 'upcoming';
-    const status = rawStatus === 'past' ? 'completed' : rawStatus;
+    const requested = rawStatus === 'past' ? 'completed' : rawStatus;
+    const status = PUBLIC_PROGRAM_STATUSES.has(requested) ? requested : 'upcoming';
     const results = await query(
       db,
       'SELECT * FROM programs WHERE status = ? ORDER BY start_datetime ASC LIMIT ?',
@@ -110,7 +121,15 @@ function createPublicRouter({ db, rateLimiters }) {
 
   router.post('/contact/send', rateLimiters.publicWrite, asyncHandler(async (req, res) => {
     const { name, email, phone, subject, message } = req.body || {};
-    if (typeof name !== 'string' || name.trim().length < 2) {
+
+    // These values are replayed into the admin dashboard and into reply emails,
+    // so markup is stripped at the point of entry.
+    const safeName = sanitizeLine(name, 100);
+    const safeMessage = sanitizeContent(message, { maxLength: 5000 });
+    const safeSubject = sanitizeLine(subject, 100);
+    const safePhone = sanitizeLine(phone, 20);
+
+    if (safeName.length < 2) {
       res.status(400).json({ message: 'Invalid name' });
       return;
     }
@@ -118,15 +137,11 @@ function createPublicRouter({ db, rateLimiters }) {
       res.status(400).json({ message: 'Invalid email' });
       return;
     }
-    if (typeof message !== 'string' || message.trim().length < 5 || message.length > 5000) {
+    if (safeMessage.length < 5) {
       res.status(400).json({ message: 'Invalid message' });
       return;
     }
-    if (typeof subject === 'string' && subject.length > 100) {
-      res.status(400).json({ message: 'Subject too long' });
-      return;
-    }
-    if (typeof phone === 'string' && phone.length > 30) {
+    if (typeof phone === 'string' && phone.trim().length > 20) {
       res.status(400).json({ message: 'Phone too long' });
       return;
     }
@@ -134,7 +149,7 @@ function createPublicRouter({ db, rateLimiters }) {
     await query(
       db,
       'INSERT INTO contact_messages (name, email, phone, subject, message) VALUES (?, ?, ?, ?, ?)',
-      [name.trim(), email.trim().toLowerCase(), phone || null, subject || null, message.trim()]
+      [safeName, email.trim().toLowerCase(), safePhone || null, safeSubject || null, safeMessage]
     );
     res.json({ message: 'Message sent' });
   }));

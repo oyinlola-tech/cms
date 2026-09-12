@@ -3,7 +3,9 @@
 
   var CMS = window.CMS = window.CMS || {};
 
-  var API_BASE_URL = window.API_BASE_URL || '/api';
+  // The backend mounts the same routers at /api/v1 (canonical) and /api
+  // (legacy). Target the versioned prefix so the versioning is real.
+  var API_BASE_URL = window.API_BASE_URL || '/api/v1';
 
   function apiRequest(endpoint, options) {
     options = options || {};
@@ -26,11 +28,13 @@
       if (response.status === 401) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('currentUser');
-        if (window.location.pathname.indexOf('/admin') !== -1 &&
-            window.location.pathname.indexOf('/login') === -1) {
+        var path = window.location.pathname;
+        if (path.indexOf('/admin') === 0 && path.indexOf('/admin/login') !== 0) {
           window.location.href = '/admin/login';
         }
-        throw new Error('Unauthorized');
+        var unauthorized = new Error('Your session has expired. Please sign in again.');
+        unauthorized.status = 401;
+        throw unauthorized;
       }
 
       var contentType = response.headers.get('content-type') || '';
@@ -49,18 +53,34 @@
 
       return data.then(function(data) {
         if (!response.ok) {
-          var message = typeof data === 'object' && data && data.message ? data.message : (typeof data === 'string' ? data : 'Request failed');
-          if (CMS.shared && CMS.shared.showToast) {
-            CMS.shared.showToast(message, 'error');
-          }
-          throw new Error(message);
+          var message = typeof data === 'object' && data && data.message
+            ? data.message
+            : (typeof data === 'string' && data ? data : 'Request failed');
+          var error = new Error(message);
+          error.status = response.status;
+          error.body = data;
+          throw error;
         }
         return data;
       });
     }).catch(function(error) {
-      console.error('API Error:', error);
+      if (!error.status) {
+        // Network-level failure rather than an HTTP error response.
+        error.message = 'Network error. Check your connection and try again.';
+      }
+      console.error('API Error:', error.message);
       throw error;
     });
+  }
+
+  function withBody(method) {
+    return function(endpoint, body) {
+      var isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+      return apiRequest(endpoint, {
+        method: method,
+        body: isFormData || typeof body === 'string' ? body : JSON.stringify(body || {})
+      });
+    };
   }
 
   CMS.api = {
@@ -68,12 +88,8 @@
     get: function(endpoint) {
       return apiRequest(endpoint, { method: 'GET' });
     },
-    post: function(endpoint, body) {
-      return apiRequest(endpoint, { method: 'POST', body: body });
-    },
-    put: function(endpoint, body) {
-      return apiRequest(endpoint, { method: 'PUT', body: body });
-    },
+    post: withBody('POST'),
+    put: withBody('PUT'),
     delete: function(endpoint) {
       return apiRequest(endpoint, { method: 'DELETE' });
     }

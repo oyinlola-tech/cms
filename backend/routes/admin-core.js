@@ -3,15 +3,17 @@ const { asyncHandler } = require('../utils/async-handler');
 const { query, transaction } = require('../utils/db');
 const { escapeHtml, isSafeHttpUrl, percentChange } = require('../utils/format');
 const { parseId, parseLimit, parsePage } = require('../utils/validation');
+const { sanitizeContent, sanitizeLine } = require('../utils/sanitize');
 
 function nl2br(value) {
   return escapeHtml(value || '').replace(/\n/g, '<br>');
 }
 
-function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService }) {
+function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService, rbac }) {
   const router = express.Router();
+  const { requirePermission } = rbac;
 
-  router.get('/dashboard/stats', authenticate, rateLimiters.dashboard, asyncHandler(async (req, res) => {
+  router.get('/dashboard/stats', authenticate, requirePermission('dashboard:read'), rateLimiters.dashboard, asyncHandler(async (req, res) => {
     const sql = `
       SELECT
         (SELECT COUNT(*) FROM members) as totalMembers,
@@ -53,7 +55,7 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
     });
   }));
 
-  router.get('/dashboard/donation-trends', authenticate, rateLimiters.dashboard, asyncHandler(async (req, res) => {
+  router.get('/dashboard/donation-trends', authenticate, requirePermission('finance:read'), rateLimiters.dashboard, asyncHandler(async (req, res) => {
     const months = 6;
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
@@ -87,7 +89,7 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
     res.json({ labels, values });
   }));
 
-  router.get('/admin/settings/links', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/settings/links', authenticate, requirePermission('settings:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const rows = await query(
       db,
       'SELECT link_key as `key`, label, url, updated_at as updatedAt FROM external_links ORDER BY id ASC'
@@ -95,7 +97,7 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
     res.json(rows || []);
   }));
 
-  router.put('/admin/settings/links', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.put('/admin/settings/links', authenticate, requirePermission('settings:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const links = Array.isArray(req.body?.links) ? req.body.links : null;
     if (!links) {
       res.status(400).json({ message: 'Invalid request' });
@@ -119,14 +121,18 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
       return;
     }
 
-    for (const update of updates) {
-      await query(db, 'UPDATE external_links SET url = ? WHERE link_key = ?', [update.url, update.key]);
-    }
+    // Applied in one transaction so a partial failure cannot leave half the
+    // links pointing at the old destinations.
+    await transaction(db, async (txQuery) => {
+      for (const update of updates) {
+        await txQuery('UPDATE external_links SET url = ? WHERE link_key = ?', [update.url, update.key]);
+      }
+    });
 
     res.json({ message: 'Links updated' });
   }));
 
-  router.get('/admin/contact/messages', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/contact/messages', authenticate, requirePermission('contact:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const page = parsePage(req.query.page, 1);
     const limit = parseLimit(req.query.limit, 10, 50);
     const offset = (page - 1) * limit;
@@ -167,7 +173,7 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
     });
   }));
 
-  router.put('/admin/contact/messages/:id/read', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.put('/admin/contact/messages/:id/read', authenticate, requirePermission('contact:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid message id' });
@@ -183,10 +189,10 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
     res.json({ message: 'Marked as read' });
   }));
 
-  router.post('/admin/contact/messages/:id/reply', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.post('/admin/contact/messages/:id/reply', authenticate, requirePermission('contact:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
-    const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim() : '';
-    const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+    const subject = sanitizeLine(req.body?.subject, 150);
+    const message = sanitizeContent(req.body?.message, { maxLength: 10000 });
 
     if (!id) {
       res.status(400).json({ message: 'Invalid message id' });
@@ -233,6 +239,17 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
       footerNote: `If you did not request this or need more help, reply to this email or contact ${church.email || 'the church office'}.`
     });
 
+    // Record the reply first: an email that is sent but not logged is
+    // unrecoverable, whereas a logged reply whose send failed can be retried.
+    const replyId = await transaction(db, async (txQuery) => {
+      const inserted = await txQuery(
+        'INSERT INTO contact_replies (contact_message_id, replied_by, to_email, subject, message) VALUES (?, ?, ?, ?, ?)',
+        [id, req.userId, original.email, subject, message]
+      );
+      await txQuery('UPDATE contact_messages SET is_read = 1 WHERE id = ?', [id]);
+      return inserted.insertId;
+    });
+
     try {
       await emailService.sendAppEmail({
         to: original.email,
@@ -242,36 +259,41 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
       });
     } catch (error) {
       console.error('Failed to send contact reply:', error);
-      res.status(500).json({ message: 'Email sending failed. Check SMTP settings.' });
+      await query(db, 'DELETE FROM contact_replies WHERE id = ?', [replyId]);
+      res.status(502).json({ message: 'Email sending failed. Check SMTP settings.' });
       return;
     }
-
-    // Use transaction to ensure both queries succeed or fail together
-    await transaction(db, async (txQuery) => {
-      await txQuery(
-        'INSERT INTO contact_replies (contact_message_id, replied_by, to_email, subject, message) VALUES (?, ?, ?, ?, ?)',
-        [id, req.userId, original.email, subject, message]
-      );
-      await txQuery('UPDATE contact_messages SET is_read = 1 WHERE id = ?', [id]);
-    });
 
     res.json({ message: 'Reply sent' });
   }));
 
-  router.get('/dashboard/recent-activity', authenticate, rateLimiters.dashboard, asyncHandler(async (req, res) => {
+  router.get('/dashboard/recent-activity', authenticate, requirePermission('dashboard:read'), rateLimiters.dashboard, asyncHandler(async (req, res) => {
+    // Each branch is limited before the UNION so MySQL can walk the created_at
+    // index and stop early, instead of materialising every member and
+    // transaction row on every dashboard load.
+    const limit = parseLimit(req.query.limit, 5, 20);
     const rows = await query(
       db,
-      `(SELECT 'member_joined' as type, CONCAT(first_name,' ',last_name) as title, 'Joined the parish' as description, created_at FROM members)
-       UNION ALL
-       (SELECT 'tithe' as type, CONCAT('NGN ', FORMAT(amount,0)) as title, COALESCE(description, category) as description, created_at FROM transactions WHERE type='income')
-       UNION ALL
-       (SELECT 'expense' as type, CONCAT('NGN ', FORMAT(amount,0)) as title, COALESCE(description, category) as description, created_at FROM transactions WHERE type='expense')
-       ORDER BY created_at DESC LIMIT 5`
+      `SELECT type, title, description, created_at FROM (
+         (SELECT 'member_joined' as type, CONCAT(first_name,' ',last_name) as title,
+                 'Joined the parish' as description, created_at
+            FROM members ORDER BY created_at DESC LIMIT ?)
+         UNION ALL
+         (SELECT 'tithe' as type, CONCAT('NGN ', FORMAT(amount,0)) as title,
+                 COALESCE(description, category) as description, created_at
+            FROM transactions WHERE type='income' ORDER BY created_at DESC LIMIT ?)
+         UNION ALL
+         (SELECT 'expense' as type, CONCAT('NGN ', FORMAT(amount,0)) as title,
+                 COALESCE(description, category) as description, created_at
+            FROM transactions WHERE type='expense' ORDER BY created_at DESC LIMIT ?)
+       ) recent
+       ORDER BY created_at DESC LIMIT ?`,
+      [limit, limit, limit, limit]
     );
     res.json(rows);
   }));
 
-  router.get('/dashboard/upcoming-event', authenticate, rateLimiters.dashboard, asyncHandler(async (req, res) => {
+  router.get('/dashboard/upcoming-event', authenticate, requirePermission('dashboard:read'), rateLimiters.dashboard, asyncHandler(async (req, res) => {
     const rows = await query(
       db,
       `SELECT id, title, start_datetime FROM programs

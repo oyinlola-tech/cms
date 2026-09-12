@@ -3,12 +3,18 @@ const express = require('express');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
 const { csvEscape, percentChange } = require('../utils/format');
-const { parseId, parseLimit, parsePage } = require('../utils/validation');
+const { isValidDateString, parseId, parseLimit, parsePage } = require('../utils/validation');
+const { sanitizeContent, sanitizeLine } = require('../utils/sanitize');
 
-function createFinanceRouter({ db, authenticate, rateLimiters }) {
+const PAYMENT_METHODS = new Set(['cash', 'bank_transfer', 'mobile', 'card', 'other']);
+const TX_STATUSES = new Set(['pending', 'completed', 'cancelled']);
+const MAX_AMOUNT = 9999999999.99; // fits DECIMAL(12,2)
+
+function createFinanceRouter({ db, authenticate, rateLimiters, rbac }) {
   const router = express.Router();
+  const { requirePermission } = rbac;
 
-  router.get('/finance/summary', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/finance/summary', authenticate, requirePermission('finance:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const rows = await query(
       db,
       `SELECT
@@ -66,7 +72,7 @@ function createFinanceRouter({ db, authenticate, rateLimiters }) {
     });
   }));
 
-  router.get('/finance/transactions', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/finance/transactions', authenticate, requirePermission('finance:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const page = parsePage(req.query.page, 1);
     const limit = parseLimit(req.query.limit, 10, 100);
     const offset = (page - 1) * limit;
@@ -92,7 +98,7 @@ function createFinanceRouter({ db, authenticate, rateLimiters }) {
     });
   }));
 
-  router.get('/finance/export', authenticate, rateLimiters.export, asyncHandler(async (req, res) => {
+  router.get('/finance/export', authenticate, requirePermission('finance:export'), rateLimiters.export, asyncHandler(async (req, res) => {
     const rows = await query(
       db,
       `SELECT reference, type, category, amount, description, status, payment_method, transaction_date
@@ -111,7 +117,7 @@ function createFinanceRouter({ db, authenticate, rateLimiters }) {
     res.send(csv);
   }));
 
-  router.post('/finance/transactions', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.post('/finance/transactions', authenticate, requirePermission('finance:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const {
       type,
       category,
@@ -127,18 +133,30 @@ function createFinanceRouter({ db, authenticate, rateLimiters }) {
       res.status(400).json({ message: 'Invalid type' });
       return;
     }
-    if (typeof category !== 'string' || category.trim().length < 2) {
+    const safeCategory = sanitizeLine(category, 50);
+    if (safeCategory.length < 2) {
       res.status(400).json({ message: 'Category required' });
       return;
     }
 
     const parsedAmount = Number(amount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > MAX_AMOUNT) {
       res.status(400).json({ message: 'Invalid amount' });
       return;
     }
-    if (!transaction_date) {
-      res.status(400).json({ message: 'Transaction date required' });
+    if (!isValidDateString(transaction_date)) {
+      res.status(400).json({ message: 'A valid transaction date (YYYY-MM-DD) is required' });
+      return;
+    }
+
+    const finalMethod = payment_method || 'cash';
+    if (!PAYMENT_METHODS.has(finalMethod)) {
+      res.status(400).json({ message: `Payment method must be one of: ${[...PAYMENT_METHODS].join(', ')}` });
+      return;
+    }
+    const finalStatus = status || 'completed';
+    if (!TX_STATUSES.has(finalStatus)) {
+      res.status(400).json({ message: `Status must be one of: ${[...TX_STATUSES].join(', ')}` });
       return;
     }
 
@@ -146,6 +164,13 @@ function createFinanceRouter({ db, authenticate, rateLimiters }) {
     if (member_id && !memberId) {
       res.status(400).json({ message: 'Invalid member' });
       return;
+    }
+    if (memberId) {
+      const members = await query(db, 'SELECT id FROM members WHERE id = ?', [memberId]);
+      if (members.length === 0) {
+        res.status(404).json({ message: 'Member not found' });
+        return;
+      }
     }
 
     const reference = `TX-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
@@ -157,18 +182,105 @@ function createFinanceRouter({ db, authenticate, rateLimiters }) {
       [
         reference,
         type,
-        category.trim(),
+        safeCategory,
         parsedAmount,
-        description || null,
+        sanitizeContent(description, { maxLength: 2000 }) || null,
         memberId,
-        payment_method || 'cash',
-        status || 'completed',
+        finalMethod,
+        finalStatus,
         transaction_date,
         req.userId
       ]
     );
 
     res.status(201).json({ id: result.insertId, reference, message: 'Transaction created' });
+  }));
+
+  router.put('/finance/transactions/:id', authenticate, requirePermission('finance:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) {
+      res.status(400).json({ message: 'Invalid transaction id' });
+      return;
+    }
+
+    const { category, amount, description, payment_method, status, transaction_date } = req.body || {};
+    const updates = [];
+    const params = [];
+
+    if (category !== undefined) {
+      const safeCategory = sanitizeLine(category, 50);
+      if (safeCategory.length < 2) {
+        res.status(400).json({ message: 'Category required' });
+        return;
+      }
+      updates.push('category = ?');
+      params.push(safeCategory);
+    }
+    if (amount !== undefined) {
+      const parsedAmount = Number(amount);
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0 || parsedAmount > MAX_AMOUNT) {
+        res.status(400).json({ message: 'Invalid amount' });
+        return;
+      }
+      updates.push('amount = ?');
+      params.push(parsedAmount);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      params.push(sanitizeContent(description, { maxLength: 2000 }) || null);
+    }
+    if (payment_method !== undefined) {
+      if (!PAYMENT_METHODS.has(payment_method)) {
+        res.status(400).json({ message: `Payment method must be one of: ${[...PAYMENT_METHODS].join(', ')}` });
+        return;
+      }
+      updates.push('payment_method = ?');
+      params.push(payment_method);
+    }
+    if (status !== undefined) {
+      if (!TX_STATUSES.has(status)) {
+        res.status(400).json({ message: `Status must be one of: ${[...TX_STATUSES].join(', ')}` });
+        return;
+      }
+      updates.push('status = ?');
+      params.push(status);
+    }
+    if (transaction_date !== undefined) {
+      if (!isValidDateString(transaction_date)) {
+        res.status(400).json({ message: 'A valid transaction date (YYYY-MM-DD) is required' });
+        return;
+      }
+      updates.push('transaction_date = ?');
+      params.push(transaction_date);
+    }
+
+    if (updates.length === 0) {
+      res.status(400).json({ message: 'No changes provided' });
+      return;
+    }
+
+    params.push(id);
+    const result = await query(db, `UPDATE transactions SET ${updates.join(', ')} WHERE id = ?`, params);
+    if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Transaction not found' });
+      return;
+    }
+    res.json({ message: 'Transaction updated' });
+  }));
+
+  router.delete('/finance/transactions/:id', authenticate, requirePermission('finance:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) {
+      res.status(400).json({ message: 'Invalid transaction id' });
+      return;
+    }
+
+    const result = await query(db, 'DELETE FROM transactions WHERE id = ?', [id]);
+    if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Transaction not found' });
+      return;
+    }
+    res.json({ message: 'Transaction deleted' });
   }));
 
   return router;

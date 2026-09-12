@@ -1,13 +1,20 @@
 const express = require('express');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
-const { buildSafeUpdateSet, isValidEmail, parseId, parseLimit, parsePage, validateColumns } = require('../utils/validation');
-const { requireRole } = require('../middleware/rbac');
+const { buildSafeUpdateSet, isValidDateString, isValidEmail, parseId, parseLimit, parsePage, trimToNull, validateColumns } = require('../utils/validation');
 
-function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) {
+const { sanitizeContent, sanitizeLine } = require('../utils/sanitize');
+
+const ATTENDANCE_STATUSES = new Set(['present', 'absent', 'excused']);
+const GENDERS = new Set(['male', 'female', 'other']);
+const MEMBER_TYPES = new Set(['adult', 'youth', 'child']);
+
+
+function createMembersRouter({ db, authenticate, rateLimiters, uploadService, rbac }) {
   const router = express.Router();
+  const { requirePermission } = rbac;
 
-  router.get('/members', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/members', authenticate, requirePermission('members:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const page = parsePage(req.query.page, 1);
     const limit = parseLimit(req.query.limit, 10, 100);
     const offset = (page - 1) * limit;
@@ -43,7 +50,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     });
   }));
 
-  router.get('/members/stats', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/members/stats', authenticate, requirePermission('members:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const rows = await query(
       db,
       `SELECT
@@ -60,7 +67,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     res.json(stats);
   }));
 
-  router.get('/members/lookup', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/members/lookup', authenticate, requirePermission('members:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     if (!search || search.length < 2) {
       res.json([]);
@@ -81,7 +88,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     res.json(rows.map((row) => ({ ...row, name: `${row.first_name} ${row.last_name}` })));
   }));
 
-  router.get('/members/:id', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/members/:id', authenticate, requirePermission('members:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid member id' });
@@ -97,7 +104,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     res.json(rows[0]);
   }));
 
-  router.post('/members/:id/avatar', authenticate, rateLimiters.upload, uploadService.upload.single('avatar'), asyncHandler(async (req, res) => {
+  router.post('/members/:id/avatar', authenticate, requirePermission('members:write'), rateLimiters.upload, uploadService.upload.single('avatar'), asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid member id' });
@@ -126,7 +133,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     res.json({ message: 'Avatar updated', url });
   }));
 
-  router.get('/members/:id/profile', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/members/:id/profile', authenticate, requirePermission('members:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid member id' });
@@ -164,7 +171,122 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     });
   }));
 
-  router.get('/members/:id/household', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/members/:id/transactions', authenticate, requirePermission('finance:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) {
+      res.status(400).json({ message: 'Invalid member id' });
+      return;
+    }
+
+    const page = parsePage(req.query.page, 1);
+    const limit = parseLimit(req.query.limit, 20, 100);
+    const offset = (page - 1) * limit;
+
+    const items = await query(
+      db,
+      `SELECT id, reference, type, category, amount, description, payment_method as method,
+              status, transaction_date as date, created_at
+       FROM transactions
+       WHERE member_id = ?
+       ORDER BY transaction_date DESC, id DESC
+       LIMIT ? OFFSET ?`,
+      [id, limit, offset]
+    );
+    const count = await query(db, 'SELECT COUNT(*) as total FROM transactions WHERE member_id = ?', [id]);
+    const total = Number(count[0]?.total || 0);
+
+    res.json({
+      items,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit) || 1,
+      from: total === 0 ? 0 : offset + 1,
+      to: Math.min(offset + limit, total)
+    });
+  }));
+
+  router.get('/members/:id/attendance', authenticate, requirePermission('members:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) {
+      res.status(400).json({ message: 'Invalid member id' });
+      return;
+    }
+
+    const limit = parseLimit(req.query.limit, 24, 200);
+    const rows = await query(
+      db,
+      `SELECT id, event_date as date, service_type as serviceType, status, notes
+       FROM attendance WHERE member_id = ?
+       ORDER BY event_date DESC LIMIT ?`,
+      [id, limit]
+    );
+
+    const summary = await query(
+      db,
+      `SELECT SUM(status='present') as presentCount, COUNT(*) as totalCount
+       FROM attendance
+       WHERE member_id = ? AND event_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)`,
+      [id]
+    );
+    const present = Number(summary[0]?.presentCount || 0);
+    const totalCount = Number(summary[0]?.totalCount || 0);
+
+    res.json({
+      items: rows.map((row) => ({ ...row, present: row.status === 'present' })),
+      total: rows.length,
+      attendanceRate: totalCount > 0 ? Math.round((present / totalCount) * 100) : null
+    });
+  }));
+
+  router.post('/members/:id/attendance', authenticate, requirePermission('members:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    if (!id) {
+      res.status(400).json({ message: 'Invalid member id' });
+      return;
+    }
+
+    const { event_date, service_type, status, notes } = req.body || {};
+    if (!isValidDateString(event_date)) {
+      res.status(400).json({ message: 'A valid event date (YYYY-MM-DD) is required' });
+      return;
+    }
+    const finalStatus = status || 'present';
+    if (!ATTENDANCE_STATUSES.has(finalStatus)) {
+      res.status(400).json({ message: `Status must be one of: ${[...ATTENDANCE_STATUSES].join(', ')}` });
+      return;
+    }
+
+    const members = await query(db, 'SELECT id FROM members WHERE id = ?', [id]);
+    if (members.length === 0) {
+      res.status(404).json({ message: 'Member not found' });
+      return;
+    }
+
+    const result = await query(
+      db,
+      'INSERT INTO attendance (member_id, event_date, service_type, status, notes) VALUES (?, ?, ?, ?, ?)',
+      [id, event_date, trimToNull(service_type), finalStatus, trimToNull(notes)]
+    );
+    res.status(201).json({ id: result.insertId, message: 'Attendance recorded' });
+  }));
+
+  router.delete('/members/:id/attendance/:attendanceId', authenticate, requirePermission('members:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+    const id = parseId(req.params.id);
+    const attendanceId = parseId(req.params.attendanceId);
+    if (!id || !attendanceId) {
+      res.status(400).json({ message: 'Invalid id' });
+      return;
+    }
+
+    const result = await query(db, 'DELETE FROM attendance WHERE id = ? AND member_id = ?', [attendanceId, id]);
+    if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Attendance record not found' });
+      return;
+    }
+    res.json({ message: 'Attendance record removed' });
+  }));
+
+  router.get('/members/:id/household', authenticate, requirePermission('members:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid member id' });
@@ -193,10 +315,10 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     res.json(rows || []);
   }));
 
-  router.post('/members/:id/household', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.post('/members/:id/household', authenticate, requirePermission('members:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     const relatedId = parseId(req.body?.related_member_id);
-    const relationship = typeof req.body?.relationship === 'string' ? req.body.relationship.trim() : '';
+    const relationship = sanitizeLine(req.body?.relationship, 50);
 
     if (!id || !relatedId) {
       res.status(400).json({ message: 'Invalid member id' });
@@ -237,7 +359,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     res.status(201).json({ message: 'Household link created' });
   }));
 
-  router.delete('/members/:id/household/:relatedId', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.delete('/members/:id/household/:relatedId', authenticate, requirePermission('members:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     const relatedId = parseId(req.params.relatedId);
     if (!id || !relatedId) {
@@ -260,7 +382,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     res.json({ message: 'Link removed' });
   }));
 
-  router.post('/members', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.post('/members', authenticate, requirePermission('members:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const {
       first_name,
       last_name,
@@ -277,17 +399,33 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
       joined_date
     } = req.body || {};
 
-    if (typeof first_name !== 'string' || first_name.trim().length < 1) {
+    const safeFirst = sanitizeLine(first_name, 50);
+    const safeLast = sanitizeLine(last_name, 50);
+    if (safeFirst.length < 1) {
       res.status(400).json({ message: 'First name required' });
       return;
     }
-    if (typeof last_name !== 'string' || last_name.trim().length < 1) {
+    if (safeLast.length < 1) {
       res.status(400).json({ message: 'Last name required' });
       return;
     }
     if (email && !isValidEmail(email)) {
       res.status(400).json({ message: 'Invalid email' });
       return;
+    }
+    if (gender && !GENDERS.has(gender)) {
+      res.status(400).json({ message: `Gender must be one of: ${[...GENDERS].join(', ')}` });
+      return;
+    }
+    if (member_type && !MEMBER_TYPES.has(member_type)) {
+      res.status(400).json({ message: `Member type must be one of: ${[...MEMBER_TYPES].join(', ')}` });
+      return;
+    }
+    for (const [label, value] of [['date of birth', dob], ['joined date', joined_date]]) {
+      if (value && !isValidDateString(value)) {
+        res.status(400).json({ message: `Invalid ${label}` });
+        return;
+      }
     }
 
     try {
@@ -297,17 +435,17 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
           (first_name, last_name, email, phone, address, dob, gender, marital_status, occupation, member_type, department, baptism_status, joined_date)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          first_name.trim(),
-          last_name.trim(),
+          safeFirst,
+          safeLast,
           email ? email.trim().toLowerCase() : null,
-          phone || null,
-          address || null,
+          sanitizeLine(phone, 20) || null,
+          sanitizeContent(address, { maxLength: 500 }) || null,
           dob || null,
           gender || null,
-          marital_status || null,
-          occupation || null,
+          sanitizeLine(marital_status, 20) || null,
+          sanitizeLine(occupation, 100) || null,
           member_type || 'adult',
-          department || null,
+          sanitizeLine(department, 50) || null,
           baptism_status ? 1 : 0,
           joined_date || null
         ]
@@ -322,7 +460,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     }
   }));
 
-  router.put('/members/:id', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.put('/members/:id', authenticate, requirePermission('members:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid member id' });
@@ -345,13 +483,42 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
       res.status(400).json({ message: 'Invalid email' });
       return;
     }
-    if (fields.first_name && typeof fields.first_name !== 'string') {
-      res.status(400).json({ message: 'Invalid first name' });
+    for (const key of ['first_name', 'last_name']) {
+      if (Object.prototype.hasOwnProperty.call(fields, key)) {
+        fields[key] = sanitizeLine(fields[key], 50);
+        if (fields[key].length < 1) {
+          res.status(400).json({ message: `Invalid ${key.replace('_', ' ')}` });
+          return;
+        }
+      }
+    }
+    if (fields.gender && !GENDERS.has(fields.gender)) {
+      res.status(400).json({ message: `Gender must be one of: ${[...GENDERS].join(', ')}` });
       return;
     }
-    if (fields.last_name && typeof fields.last_name !== 'string') {
-      res.status(400).json({ message: 'Invalid last name' });
+    if (fields.member_type && !MEMBER_TYPES.has(fields.member_type)) {
+      res.status(400).json({ message: `Member type must be one of: ${[...MEMBER_TYPES].join(', ')}` });
       return;
+    }
+    for (const key of ['dob', 'joined_date']) {
+      if (fields[key] && !isValidDateString(fields[key])) {
+        res.status(400).json({ message: `Invalid ${key.replace('_', ' ')}` });
+        return;
+      }
+    }
+    for (const [key, max] of [['phone', 20], ['marital_status', 20], ['occupation', 100], ['department', 50]]) {
+      if (Object.prototype.hasOwnProperty.call(fields, key)) {
+        fields[key] = sanitizeLine(fields[key], max) || null;
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'address')) {
+      fields.address = sanitizeContent(fields.address, { maxLength: 500 }) || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'baptism_status')) {
+      fields.baptism_status = fields.baptism_status ? 1 : 0;
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'is_active')) {
+      fields.is_active = fields.is_active ? 1 : 0;
     }
 
     const keys = Object.keys(fields);
@@ -395,7 +562,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     }
   }));
 
-  router.delete('/members/:id', authenticate, requireRole('admin'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.delete('/members/:id', authenticate, requirePermission('members:delete'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid member id' });

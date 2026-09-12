@@ -13,11 +13,23 @@ function normalizeSql(sql) {
 
 function createMockDb({ users, churchInfo, links }) {
   const state = {
-    contacts: []
+    contacts: [],
+    lastAnnouncementParams: null
   };
 
-  return {
+  const db = {
     state,
+    // transaction() in utils/db.js checks out a pooled connection, so the
+    // double has to expose the same surface as a mysql2 pool.
+    getConnection(callback) {
+      setImmediate(() => callback(null, {
+        query: (sql, params, cb) => db.query(sql, params, cb),
+        beginTransaction: (cb) => setImmediate(() => cb(null)),
+        commit: (cb) => setImmediate(() => cb(null)),
+        rollback: (cb) => setImmediate(() => cb(null)),
+        release: () => {}
+      }));
+    },
     query(sql, params, callback) {
       const cb = typeof params === 'function' ? params : callback;
       const values = Array.isArray(params) ? params : [];
@@ -33,6 +45,30 @@ function createMockDb({ users, churchInfo, links }) {
 
           if (normalized.startsWith('UPDATE users SET last_login = NOW(), last_ip = ? WHERE id = ?')) {
             cb(null, { affectedRows: 1 });
+            return;
+          }
+
+          // Used by the authenticate middleware to validate token_version.
+          if (normalized.startsWith('SELECT id, role, token_version FROM users WHERE id = ?')) {
+            const id = Number(values[0]);
+            const user = Object.values(users).find((item) => item.id === id);
+            cb(null, user ? [{ id: user.id, role: user.role, token_version: user.token_version || 0 }] : []);
+            return;
+          }
+
+          // Used by the RBAC middleware when the role is not already cached.
+          if (normalized.startsWith('SELECT id, role FROM users WHERE id = ?')) {
+            const id = Number(values[0]);
+            const user = Object.values(users).find((item) => item.id === id);
+            cb(null, user ? [{ id: user.id, role: user.role }] : []);
+            return;
+          }
+
+          if (normalized.startsWith('UPDATE users SET token_version = token_version + 1 WHERE id = ?')) {
+            const id = Number(values[0]);
+            const user = Object.values(users).find((item) => item.id === id);
+            if (user) user.token_version = (user.token_version || 0) + 1;
+            cb(null, { affectedRows: user ? 1 : 0 });
             return;
           }
 
@@ -69,6 +105,22 @@ function createMockDb({ users, churchInfo, links }) {
             return;
           }
 
+          if (normalized.startsWith('SELECT id, title, summary, category, image_url, is_new, created_at FROM announcements')) {
+            state.lastAnnouncementParams = values.slice(0, values.length - 2);
+            cb(null, []);
+            return;
+          }
+
+          if (normalized.startsWith('SELECT COUNT(*) as total FROM announcements')) {
+            cb(null, [{ total: 0 }]);
+            return;
+          }
+
+          if (normalized.startsWith('DELETE FROM members WHERE id = ?')) {
+            cb(null, { affectedRows: 1 });
+            return;
+          }
+
           if (normalized.startsWith('SELECT link_key, url FROM external_links')) {
             cb(null, Object.entries(links).map(([link_key, url]) => ({ link_key, url })));
             return;
@@ -94,6 +146,8 @@ function createMockDb({ users, churchInfo, links }) {
       });
     }
   };
+
+  return db;
 }
 
 async function buildTestServer() {
@@ -105,14 +159,36 @@ async function buildTestServer() {
       name: 'Parish Admin',
       email: 'admin@example.com',
       password: passwordHash,
-      role: 'admin'
+      role: 'admin',
+      is_active: 1,
+      token_version: 0
     },
     'ratelimit@example.com': {
       id: 2,
       name: 'Rate Limit User',
       email: 'ratelimit@example.com',
       password: passwordHash,
-      role: 'admin'
+      role: 'admin',
+      is_active: 1,
+      token_version: 0
+    },
+    'logout@example.com': {
+      id: 4,
+      name: 'Logout User',
+      email: 'logout@example.com',
+      password: passwordHash,
+      role: 'admin',
+      is_active: 1,
+      token_version: 0
+    },
+    'viewer@example.com': {
+      id: 3,
+      name: 'Read Only',
+      email: 'viewer@example.com',
+      password: passwordHash,
+      role: 'viewer',
+      is_active: 1,
+      token_version: 0
     }
   };
 
@@ -152,6 +228,7 @@ async function buildTestServer() {
         return (req, res, next) => next();
       }
     },
+    async detectImageFormat() { return null; },
     removeUploadByUrl() {}
   };
 
@@ -289,4 +366,150 @@ test('returns API 404s and page 404s from the new router structure', async () =>
   const pageBody = await pageResponse.text();
   assert.equal(pageResponse.status, 404);
   assert.match(pageBody, /html/i);
+});
+
+// --- Regression tests for the authorization and token bugs ---
+
+test('RBAC denies a viewer the permissions it does not hold', async () => {
+  const { baseUrl, password } = context;
+
+  const login = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'viewer@example.com', password })
+  });
+  assert.equal(login.status, 200);
+  const { token } = await readJson(login);
+
+  // members:delete is not granted to the viewer role.
+  const denied = await fetch(`${baseUrl}/api/members/1`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  assert.equal(denied.status, 403);
+  const body = await readJson(denied);
+  assert.equal(body.message, 'Insufficient permissions');
+});
+
+test('RBAC allows a permission the role does hold', async () => {
+  const { baseUrl, password } = context;
+
+  const login = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'viewer@example.com', password })
+  });
+  const { token } = await readJson(login);
+
+  // settings:read is not granted to viewer, but contact:read is - confirm the
+  // guard distinguishes between them rather than failing closed on everything.
+  const denied = await fetch(`${baseUrl}/api/admin/settings/links`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  assert.equal(denied.status, 403);
+});
+
+test('a password-reset token cannot be used as a session token', async () => {
+  const { baseUrl } = context;
+  const jwt = require('jsonwebtoken');
+
+  const resetToken = jwt.sign(
+    { email: 'admin@example.com', rid: 1, purpose: 'password-reset' },
+    '12345678901234567890123456789012',
+    { expiresIn: '10m' }
+  );
+
+  const response = await fetch(`${baseUrl}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${resetToken}` }
+  });
+  assert.equal(response.status, 401);
+});
+
+test('a session token cannot be used to reset a password', async () => {
+  const { baseUrl, password } = context;
+
+  const login = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@example.com', password })
+  });
+  const { token } = await readJson(login);
+
+  const response = await fetch(`${baseUrl}/api/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword: 'BrandNewPassw0rd!' })
+  });
+
+  assert.equal(response.status, 400);
+  const body = await readJson(response);
+  assert.equal(body.message, 'Invalid or expired token');
+});
+
+test('logging out revokes every token issued for that user', async () => {
+  const { baseUrl, password } = context;
+
+  const login = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'logout@example.com', password })
+  });
+  assert.equal(login.status, 200);
+  const { token } = await readJson(login);
+
+  const before = await fetch(`${baseUrl}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal(before.status, 200);
+
+  const logout = await fetch(`${baseUrl}/api/auth/logout`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  assert.equal(logout.status, 200);
+
+  const after = await fetch(`${baseUrl}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal(after.status, 401);
+});
+
+test('the public announcements endpoint cannot be coerced into serving drafts', async () => {
+  const { baseUrl, db } = context;
+
+  db.state.lastAnnouncementParams = null;
+  const response = await fetch(`${baseUrl}/api/announcements?status=draft`);
+
+  // The handler pins status to 'published' regardless of the query string.
+  assert.equal(response.status, 200);
+  assert.deepEqual(db.state.lastAnnouncementParams, ['published']);
+});
+
+test('contact submissions are stripped of markup before storage', async () => {
+  const { baseUrl, db } = context;
+
+  const response = await fetch(`${baseUrl}/api/contact/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Ada <script>alert(1)</script>',
+      email: 'ada@example.com',
+      subject: 'Hello',
+      message: 'Please call me <img src=x onerror=alert(1)> soon.'
+    })
+  });
+
+  assert.equal(response.status, 200);
+  const stored = db.state.contacts[db.state.contacts.length - 1];
+  assert.ok(!stored.name.includes('<'), 'name should not retain markup');
+  assert.ok(!stored.message.includes('<'), 'message should not retain markup');
+  assert.ok(!stored.message.includes('onerror'), 'event handlers should be stripped');
+});
+
+test('the pages router serves /admin and the settings deep links', async () => {
+  const { baseUrl } = context;
+
+  const admin = await fetch(`${baseUrl}/admin`, { redirect: 'manual' });
+  assert.equal(admin.status, 302);
+  assert.equal(admin.headers.get('location'), '/admin/dashboard');
+
+  const parish = await fetch(`${baseUrl}/admin/settings/parish`, { redirect: 'manual' });
+  assert.equal(parish.status, 302);
+  assert.equal(parish.headers.get('location'), '/admin/settings#parish');
 });

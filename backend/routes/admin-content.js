@@ -1,21 +1,41 @@
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
-const rateLimit = require('express-rate-limit');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
-const { buildSafeUpdateSet, parseId, parseLimit, parsePage, validateColumns } = require('../utils/validation');
+const { buildSafeUpdateSet, isValidDateTimeString, parseId, parseLimit, parsePage, trimToNull, validateColumns } = require('../utils/validation');
+const { sanitizeContent, sanitizeImageUrl, sanitizeLine } = require('../utils/sanitize');
 
-function createAdminContentRouter({ db, authenticate, rateLimiters, uploadService }) {
+const PROGRAM_TYPES = new Set(['devotion', 'service', 'fellowship', 'bible_study', 'outreach', 'youth', 'other']);
+const PROGRAM_STATUSES = new Set(['upcoming', 'ongoing', 'completed', 'cancelled']);
+const RECURRENCES = new Set(['none', 'daily', 'weekly', 'monthly']);
+const ANNOUNCEMENT_STATUSES = new Set(['draft', 'published', 'scheduled', 'archived']);
+const ANNOUNCEMENT_PRIORITIES = new Set(['normal', 'high', 'urgent']);
+
+/**
+ * Rejects values that would not fit the programs table ENUM columns.
+ * MySQL would otherwise either error out or silently coerce them.
+ * @param {Object} values - Partial program fields
+ * @returns {string|null} - An error message, or null when everything is valid
+ */
+function checkEnums({ type, status, recurring }) {
+  if (type !== undefined && type !== null && !PROGRAM_TYPES.has(type)) {
+    return `Type must be one of: ${[...PROGRAM_TYPES].join(', ')}`;
+  }
+  if (status !== undefined && status !== null && !PROGRAM_STATUSES.has(status)) {
+    return `Status must be one of: ${[...PROGRAM_STATUSES].join(', ')}`;
+  }
+  if (recurring !== undefined && recurring !== null && !RECURRENCES.has(recurring)) {
+    return `Recurring must be one of: ${[...RECURRENCES].join(', ')}`;
+  }
+  return null;
+}
+
+function createAdminContentRouter({ db, authenticate, rateLimiters, uploadService, rbac }) {
   const router = express.Router();
-  const adminGalleryStatsRateLimit = rateLimiters?.adminRead || rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 60,
-    standardHeaders: true,
-    legacyHeaders: false
-  });
+  const { requirePermission } = rbac;
 
-  router.get('/admin/programs', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/programs', authenticate, requirePermission('programs:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const page = parsePage(req.query.page, 1);
     const limit = parseLimit(req.query.limit, 10, 100);
     const offset = (page - 1) * limit;
@@ -62,7 +82,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     });
   }));
 
-  router.get('/admin/programs/stats', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/programs/stats', authenticate, requirePermission('programs:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const rows = await query(
       db,
       `SELECT
@@ -76,7 +96,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json(rows[0] || {});
   }));
 
-  router.get('/admin/programs/:id', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/programs/:id', authenticate, requirePermission('programs:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid program id' });
@@ -91,7 +111,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json(rows[0]);
   }));
 
-  router.post('/admin/programs', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.post('/admin/programs', authenticate, requirePermission('programs:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const {
       title,
       description,
@@ -109,12 +129,27 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       display_order
     } = req.body || {};
 
-    if (typeof title !== 'string' || title.trim().length < 3) {
-      res.status(400).json({ message: 'Title is required' });
+    const safeTitle = sanitizeLine(title, 200);
+    if (safeTitle.length < 3) {
+      res.status(400).json({ message: 'Title must be at least 3 characters' });
       return;
     }
-    if (!start_datetime) {
-      res.status(400).json({ message: 'Start date/time is required' });
+    if (!isValidDateTimeString(start_datetime)) {
+      res.status(400).json({ message: 'A valid start date/time is required' });
+      return;
+    }
+    if (end_datetime && !isValidDateTimeString(end_datetime)) {
+      res.status(400).json({ message: 'Invalid end date/time' });
+      return;
+    }
+    if (recurring_until && !isValidDateTimeString(recurring_until)) {
+      res.status(400).json({ message: 'Invalid recurring-until date' });
+      return;
+    }
+
+    const enumError = checkEnums({ type, status, recurring });
+    if (enumError) {
+      res.status(400).json({ message: enumError });
       return;
     }
 
@@ -124,16 +159,16 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
         (title, description, type, category, location, start_datetime, end_datetime, recurring, recurring_until, schedule, is_main_service, is_featured, status, display_order)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        title.trim(),
-        description || null,
+        safeTitle,
+        sanitizeContent(description, { maxLength: 10000 }) || null,
         type || 'service',
-        category || null,
-        location || null,
+        sanitizeLine(category, 50) || null,
+        sanitizeLine(location, 200) || null,
         start_datetime,
         end_datetime || null,
         recurring || 'none',
         recurring_until || null,
-        schedule || null,
+        sanitizeLine(schedule, 100) || null,
         is_main_service ? 1 : 0,
         is_featured ? 1 : 0,
         status || 'upcoming',
@@ -144,7 +179,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.status(201).json({ id: result.insertId, message: 'Program created' });
   }));
 
-  router.put('/admin/programs/:id', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.put('/admin/programs/:id', authenticate, requirePermission('programs:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid program id' });
@@ -162,8 +197,24 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       }
     }
 
-    if (fields.title && (typeof fields.title !== 'string' || fields.title.trim().length < 3)) {
-      res.status(400).json({ message: 'Invalid title' });
+    if (Object.prototype.hasOwnProperty.call(fields, 'title')) {
+      fields.title = sanitizeLine(fields.title, 200);
+      if (fields.title.length < 3) {
+        res.status(400).json({ message: 'Title must be at least 3 characters' });
+        return;
+      }
+    }
+
+    for (const key of ['start_datetime', 'end_datetime', 'recurring_until']) {
+      if (fields[key] && !isValidDateTimeString(fields[key])) {
+        res.status(400).json({ message: `Invalid ${key.replace(/_/g, ' ')}` });
+        return;
+      }
+    }
+
+    const enumError = checkEnums(fields);
+    if (enumError) {
+      res.status(400).json({ message: enumError });
       return;
     }
 
@@ -182,6 +233,10 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     const params = validKeys.map((key) => {
       if (key === 'is_main_service' || key === 'is_featured') return fields[key] ? 1 : 0;
       if (key === 'display_order') return Number.isFinite(Number(fields[key])) ? Number(fields[key]) : 0;
+      if (key === 'description') return sanitizeContent(fields[key], { maxLength: 10000 }) || null;
+      if (key === 'category') return sanitizeLine(fields[key], 50) || null;
+      if (key === 'location') return sanitizeLine(fields[key], 200) || null;
+      if (key === 'schedule') return sanitizeLine(fields[key], 100) || null;
       if (typeof fields[key] === 'string') return fields[key].trim();
       return fields[key];
     });
@@ -196,7 +251,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json({ message: 'Program updated' });
   }));
 
-  router.delete('/admin/programs/:id', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.delete('/admin/programs/:id', authenticate, requirePermission('programs:delete'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid program id' });
@@ -211,7 +266,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json({ message: 'Program deleted' });
   }));
 
-  router.get('/admin/announcements', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/announcements', authenticate, requirePermission('announcements:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const page = parsePage(req.query.page, 1);
     const limit = parseLimit(req.query.limit, 10, 100);
     const offset = (page - 1) * limit;
@@ -253,7 +308,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     });
   }));
 
-  router.get('/admin/announcements/stats', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/announcements/stats', authenticate, requirePermission('announcements:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const statsRows = await query(
       db,
       `SELECT
@@ -270,7 +325,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json(stats);
   }));
 
-  router.get('/admin/announcements/:id', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/announcements/:id', authenticate, requirePermission('announcements:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid announcement id' });
@@ -284,7 +339,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json(rows[0]);
   }));
 
-  router.post('/admin/announcements', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.post('/admin/announcements', authenticate, requirePermission('announcements:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const {
       title,
       summary,
@@ -298,16 +353,32 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       is_featured
     } = req.body || {};
 
-    if (typeof title !== 'string' || title.trim().length < 3) {
-      res.status(400).json({ message: 'Title is required' });
+    const safeTitle = sanitizeLine(title, 200);
+    if (safeTitle.length < 3) {
+      res.status(400).json({ message: 'Title must be at least 3 characters' });
       return;
     }
 
-    const bodyText = typeof content === 'string' ? content.trim() : '';
-    const computedSummary = typeof summary === 'string' && summary.trim()
-      ? summary.trim()
-      : (bodyText ? bodyText.slice(0, 160) : title.trim().slice(0, 160));
     const finalStatus = status || 'draft';
+    if (!ANNOUNCEMENT_STATUSES.has(finalStatus)) {
+      res.status(400).json({ message: `Status must be one of: ${[...ANNOUNCEMENT_STATUSES].join(', ')}` });
+      return;
+    }
+    const finalPriority = priority || 'normal';
+    if (!ANNOUNCEMENT_PRIORITIES.has(finalPriority)) {
+      res.status(400).json({ message: `Priority must be one of: ${[...ANNOUNCEMENT_PRIORITIES].join(', ')}` });
+      return;
+    }
+    if (finalStatus === 'scheduled' && !isValidDateTimeString(scheduled_for)) {
+      res.status(400).json({ message: 'A scheduled announcement needs a valid scheduled_for date/time' });
+      return;
+    }
+
+    // Announcement content is rendered on a public page, so it is stored as
+    // plain text - no markup survives, which removes the stored-XSS vector.
+    const bodyText = sanitizeContent(content, { maxLength: 20000 });
+    const safeSummary = sanitizeLine(summary, 300);
+    const computedSummary = safeSummary || (bodyText ? bodyText.slice(0, 160) : safeTitle.slice(0, 160));
     const publishedAt = finalStatus === 'published' ? new Date() : null;
 
     const result = await query(
@@ -316,14 +387,14 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
         (title, summary, content, category, image_url, priority, status, scheduled_for, published_at, is_new, is_featured, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        title.trim(),
+        safeTitle,
         computedSummary,
         bodyText || null,
-        category || 'General',
-        image_url || null,
-        priority || 'normal',
+        sanitizeLine(category, 50) || 'General',
+        sanitizeImageUrl(image_url),
+        finalPriority,
         finalStatus,
-        finalStatus === 'scheduled' ? (scheduled_for || null) : null,
+        finalStatus === 'scheduled' ? scheduled_for : null,
         publishedAt,
         is_new ? 1 : 0,
         is_featured ? 1 : 0,
@@ -334,7 +405,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.status(201).json({ id: result.insertId, message: 'Announcement created' });
   }));
 
-  router.put('/admin/announcements/:id', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.put('/admin/announcements/:id', authenticate, requirePermission('announcements:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid announcement id' });
@@ -349,16 +420,42 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       }
     }
 
-    if (fields.title && (typeof fields.title !== 'string' || fields.title.trim().length < 3)) {
-      res.status(400).json({ message: 'Invalid title' });
+    if (Object.prototype.hasOwnProperty.call(fields, 'title')) {
+      fields.title = sanitizeLine(fields.title, 200);
+      if (fields.title.length < 3) {
+        res.status(400).json({ message: 'Title must be at least 3 characters' });
+        return;
+      }
+    }
+
+    if (fields.status !== undefined && !ANNOUNCEMENT_STATUSES.has(fields.status)) {
+      res.status(400).json({ message: `Status must be one of: ${[...ANNOUNCEMENT_STATUSES].join(', ')}` });
+      return;
+    }
+    if (fields.priority !== undefined && !ANNOUNCEMENT_PRIORITIES.has(fields.priority)) {
+      res.status(400).json({ message: `Priority must be one of: ${[...ANNOUNCEMENT_PRIORITIES].join(', ')}` });
+      return;
+    }
+    if (fields.status === 'scheduled' && !isValidDateTimeString(fields.scheduled_for)) {
+      res.status(400).json({ message: 'A scheduled announcement needs a valid scheduled_for date/time' });
       return;
     }
 
+    if (Object.prototype.hasOwnProperty.call(fields, 'content')) {
+      fields.content = sanitizeContent(fields.content, { maxLength: 20000 });
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'summary')) {
+      fields.summary = sanitizeLine(fields.summary, 300);
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'image_url')) {
+      fields.image_url = sanitizeImageUrl(fields.image_url);
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'category')) {
+      fields.category = sanitizeLine(fields.category, 50) || 'General';
+    }
+
     if (fields.content && !fields.summary) {
-      const contentText = typeof fields.content === 'string' ? fields.content.trim() : '';
-      if (contentText) {
-        fields.summary = contentText.slice(0, 160);
-      }
+      fields.summary = fields.content.slice(0, 160);
     }
 
     if (fields.status === 'published') {
@@ -397,7 +494,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json({ message: 'Announcement updated' });
   }));
 
-  router.delete('/admin/announcements/:id', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.delete('/admin/announcements/:id', authenticate, requirePermission('announcements:delete'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid announcement id' });
@@ -412,7 +509,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json({ message: 'Announcement deleted' });
   }));
 
-  router.get('/admin/gallery', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/gallery', authenticate, requirePermission('gallery:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const page = parsePage(req.query.page, 1);
     const limit = parseLimit(req.query.limit, 12, 100);
     const offset = (page - 1) * limit;
@@ -454,7 +551,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     });
   }));
 
-  router.get('/admin/gallery/stats', authenticate, adminGalleryStatsRateLimit, asyncHandler(async (req, res) => {
+  router.get('/admin/gallery/stats', authenticate, requirePermission('gallery:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const entries = await fs.promises.readdir(uploadService.uploadsDir, { withFileTypes: true });
     let totalBytes = 0;
 
@@ -472,7 +569,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json({ totalImages: Number(rows[0]?.total || 0), storageBytes: totalBytes });
   }));
 
-  router.get('/admin/gallery/:id', authenticate, rateLimiters.adminRead, asyncHandler(async (req, res) => {
+  router.get('/admin/gallery/:id', authenticate, requirePermission('gallery:read'), rateLimiters.adminRead, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid image id' });
@@ -487,7 +584,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json(rows[0]);
   }));
 
-  router.put('/admin/gallery/:id', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.put('/admin/gallery/:id', authenticate, requirePermission('gallery:write'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid image id' });
@@ -499,9 +596,9 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       db,
       `UPDATE gallery SET caption = ?, description = ?, category = ?, is_featured = ?, display_order = ? WHERE id = ?`,
       [
-        caption || null,
-        description || null,
-        category || null,
+        sanitizeLine(caption, 255) || null,
+        sanitizeContent(description, { maxLength: 2000 }) || null,
+        sanitizeLine(category, 50) || null,
         is_featured ? 1 : 0,
         Number.isFinite(Number(display_order)) ? Number(display_order) : 0,
         id
@@ -515,7 +612,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json({ message: 'Image updated' });
   }));
 
-  router.delete('/admin/gallery/:id', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.delete('/admin/gallery/:id', authenticate, requirePermission('gallery:delete'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid image id' });
@@ -534,7 +631,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     res.json({ message: 'Image deleted' });
   }));
 
-  router.post('/admin/gallery', authenticate, rateLimiters.upload, uploadService.upload.single('image'), asyncHandler(async (req, res) => {
+  router.post('/admin/gallery', authenticate, requirePermission('gallery:write'), rateLimiters.upload, uploadService.upload.single('image'), asyncHandler(async (req, res) => {
     if (!req.file) {
       res.status(400).json({ message: 'Image is required' });
       return;
@@ -547,7 +644,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       await query(
         db,
         'INSERT INTO gallery (url, caption, description, category, uploaded_by) VALUES (?, ?, ?, ?, ?)',
-        [url, caption || null, description || null, category || null, req.userId]
+        [url, sanitizeLine(caption, 255) || null, sanitizeContent(description, { maxLength: 2000 }) || null, sanitizeLine(category, 50) || null, req.userId]
       );
     } catch (error) {
       uploadService.removeUploadByUrl(url);

@@ -16,11 +16,11 @@
     page = page || 1;
     return api.apiRequest('/admin/gallery?page=' + page).then(function(data) {
       renderGalleryGrid(data.items || []);
-      if (data.pagination) {
+      if (data.totalPages > 1) {
         renderPaginationControls(
           document.getElementById('pagination-controls'),
-          data.pagination.page,
-          data.pagination.totalPages,
+          data.page,
+          data.totalPages,
           function(newPage) {
             loadGallery(newPage);
           }
@@ -54,6 +54,12 @@
       '</tr>';
     });
     tbody.innerHTML = html;
+
+    document.querySelectorAll('.edit-image-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        editImage(Number(this.getAttribute('data-id')));
+      });
+    });
 
     document.querySelectorAll('.delete-image-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
@@ -97,32 +103,102 @@
     });
   }
 
+  /**
+   * Uploads the selected files one at a time.
+   *
+   * This used to append every file under the field name 'images' in a single
+   * request, while the API accepts a single file under 'image' - multer
+   * rejected it with "Unexpected field", so gallery upload never worked.
+   */
   function uploadImages(files) {
-    var formData = new FormData();
-    for (var i = 0; i < files.length; i++) {
-      formData.append('images', files[i]);
-    }
+    var list = Array.prototype.slice.call(files);
+    if (list.length === 0) return Promise.resolve();
 
-    return api.apiRequest('/admin/gallery', {
-      method: 'POST',
-      body: formData
-    }).then(function() {
-      showToast('Images uploaded successfully', 'success');
-      loadGallery(currentPage);
-    }).catch(function(error) {
-      showToast(error.message || 'Failed to upload images', 'error');
+    var uploaded = 0;
+    var failures = [];
+
+    var chain = list.reduce(function(promise, file) {
+      return promise.then(function() {
+        var formData = new FormData();
+        formData.append('image', file);
+
+        return api.apiRequest('/admin/gallery', {
+          method: 'POST',
+          body: formData
+        }).then(function() {
+          uploaded += 1;
+        }).catch(function(error) {
+          failures.push(file.name + ': ' + (error.message || 'upload failed'));
+        });
+      });
+    }, Promise.resolve());
+
+    return chain.then(function() {
+      if (uploaded > 0) {
+        showToast(uploaded + (uploaded === 1 ? ' image uploaded' : ' images uploaded'), 'success');
+        loadGallery(currentPage);
+      }
+      if (failures.length > 0) {
+        showToast(failures[0], 'error');
+      }
     });
+  }
+
+  function editImage(id) {
+    return api.apiRequest('/admin/gallery/' + id).then(function(image) {
+      shared.openModal({
+        title: 'Edit image',
+        submitLabel: 'Save changes',
+        contentHtml:
+          '<img src="' + escapeHtml(image.url) + '" alt="" class="w-full h-40 object-cover rounded-xl mb-4"/>' +
+          field('caption', 'Caption', image.caption, 'text', 255) +
+          field('description', 'Description', image.description, 'textarea', 2000) +
+          field('category', 'Category', image.category, 'text', 50) +
+          field('display_order', 'Display order', image.display_order, 'number') +
+          '<label class="flex items-center gap-2 text-sm font-semibold">' +
+            '<input type="checkbox" name="is_featured" ' + (image.is_featured ? 'checked' : '') + '/> Featured' +
+          '</label>',
+        onSubmit: function(formData, close) {
+          return api.put('/admin/gallery/' + id, {
+            caption: formData.get('caption'),
+            description: formData.get('description'),
+            category: formData.get('category'),
+            display_order: Number(formData.get('display_order')) || 0,
+            is_featured: formData.get('is_featured') === 'on'
+          }).then(function() {
+            showToast('Image updated', 'success');
+            close();
+            loadGallery(currentPage);
+          }).catch(function(error) {
+            showToast(error.message || 'Failed to update image', 'error');
+          });
+        }
+      });
+    }).catch(function(error) {
+      showToast(error.message || 'Failed to load image', 'error');
+    });
+  }
+
+  function field(name, label, value, type, maxLength) {
+    var attrs = 'name="' + name + '" id="gal-' + name + '"' +
+      (maxLength ? ' maxlength="' + maxLength + '"' : '') +
+      ' class="w-full bg-surface-container-highest rounded-lg px-4 py-3 mb-4"';
+    var control = type === 'textarea'
+      ? '<textarea ' + attrs + ' rows="3">' + escapeHtml(value == null ? '' : value) + '</textarea>'
+      : '<input type="' + (type || 'text') + '" ' + attrs + ' value="' + escapeHtml(value == null ? '' : value) + '"/>';
+    return '<label class="block text-xs font-bold text-primary mb-1" for="gal-' + name + '">' + label + '</label>' + control;
   }
 
   CMS.pages = CMS.pages || {};
   CMS.pages.galleryAdmin = {
     init: function() {
-      shared.init();
       if (!auth.requireAuth()) return;
       loadGallery(1);
       initUpload();
     },
-    loadGallery: loadGallery
+    loadGallery: loadGallery,
+    uploadImages: uploadImages,
+    editImage: editImage
   };
 
 })();

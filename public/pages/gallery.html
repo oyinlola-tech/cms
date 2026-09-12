@@ -7,81 +7,12 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
   
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="/js/tailwind-config.js"></script>
   
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
   
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          "colors": {
-            "on-secondary-container": "#745c00",
-            "on-primary": "#ffffff",
-            "on-tertiary": "#ffffff",
-            "on-background": "#1b1c1a",
-            "tertiary-fixed-dim": "#ffb3b5",
-            "surface-container-high": "#eae8e4",
-            "primary-fixed": "#b1f0ce",
-            "primary": "#002d1c",
-            "on-primary-fixed-variant": "#0e5138",
-            "on-secondary": "#ffffff",
-            "surface-container-highest": "#e4e2de",
-            "outline": "#717973",
-            "surface": "#fbf9f5",
-            "surface-tint": "#2c694e",
-            "primary-container": "#00452e",
-            "on-surface-variant": "#414844",
-            "surface-container-lowest": "#ffffff",
-            "on-error": "#ffffff",
-            "background": "#fbf9f5",
-            "secondary-container": "#fed65b",
-            "error-container": "#ffdad6",
-            "surface-bright": "#fbf9f5",
-            "inverse-on-surface": "#f2f0ed",
-            "error": "#ba1a1a",
-            "surface-container": "#efeeea",
-            "inverse-surface": "#30312e",
-            "primary-fixed-dim": "#95d4b3",
-            "on-tertiary-fixed-variant": "#8e0f28",
-            "surface-dim": "#dbdad6",
-            "tertiary-container": "#7d001f",
-            "on-tertiary-fixed": "#40000b",
-            "tertiary-fixed": "#ffdada",
-            "on-secondary-fixed-variant": "#574500",
-            "on-error-container": "#93000a",
-            "inverse-primary": "#95d4b3",
-            "surface-variant": "#e4e2de",
-            "outline-variant": "#c1c8c2",
-            "tertiary": "#540012",
-            "on-secondary-fixed": "#241a00",
-            "on-primary-fixed": "#002114",
-            "secondary-fixed": "#ffe088",
-            "secondary": "#735c00",
-            "on-primary-container": "#76b394",
-            "secondary-fixed-dim": "#e9c349",
-            "on-surface": "#1b1c1a",
-            "surface-container-low": "#f5f3ef",
-            "on-tertiary-container": "#ff7f87"
-          },
-          "borderRadius": {
-            "DEFAULT": "0.25rem",
-            "lg": "0.5rem",
-            "xl": "0.75rem",
-            "full": "9999px"
-          },
-          "fontFamily": {
-            "headline": ["Noto Serif"],
-            "body": ["Plus Jakarta Sans"],
-            "label": ["Plus Jakarta Sans"]
-          }
-        }
-      }
-    }
-  </script>
-  
-  <style>
+<style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     h1, h2, h3 { font-family: 'Noto Serif', serif; }
     .material-symbols-outlined {
@@ -90,7 +21,7 @@
   </style>
 </head>
 
-<body class="bg-surface text-on-surface">
+<body class="bg-surface text-on-surface" data-page="gallery">
 
 <!-- Top Navigation Bar -->
 <header class="bg-[#fbf9f5] sticky top-0 z-50 transition-colors duration-300">
@@ -216,11 +147,6 @@
 <script src="/js/utils/api.js" defer></script>
 <script src="/js/utils/auth.js" defer></script>
 <script src="/js/pages/gallery.js" defer></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (window.CMS && window.CMS.shared) window.CMS.shared.init();
-    if (window.CMS && window.CMS.pages && window.CMS.pages.gallery) window.CMS.pages.gallery.init();
-  });
-</script>
+<script src="/js/page-init.js" defer></script>
 </body>
 </html>

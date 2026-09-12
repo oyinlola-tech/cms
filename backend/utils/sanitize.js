@@ -1,79 +1,106 @@
 /**
- * Input sanitization utilities for HTML content fields.
- * These functions strip potentially dangerous content while preserving safe text.
+ * Input sanitization utilities for user-supplied content.
+ *
+ * The CMS has no rich-text editor, and hand-rolled HTML allowlisting is a
+ * reliable source of XSS bugs, so long-form fields are stored as plain text.
+ * Rendering escapes the text and converts newlines to <br>, which is safe by
+ * construction.
  */
+
+const { escapeHtml } = require('./format');
+
+// Control characters are stripped everywhere: they serve no purpose in user
+// content and break both terminal output and CSV/email rendering.
+const CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
+const CONTROL_CHARS_KEEP_BREAKS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 
 /**
  * Strips HTML tags from a string, returning plain text.
- * @param {string} input - The input string
- * @returns {string} - The sanitized plain text
+ * Applied repeatedly so that nested constructs such as "<<b>script>" cannot
+ * reassemble into a tag after a single pass.
+ * @param {string} input
+ * @returns {string}
  */
 function stripHtmlTags(input) {
   if (typeof input !== 'string') return '';
-  return input.replace(/<[^>]*>/g, '');
+
+  let previous;
+  let current = input;
+  do {
+    previous = current;
+    current = current.replace(/<[^>]*>/g, '');
+  } while (current !== previous);
+
+  // Remove any leftover angle brackets so nothing can be reconstructed later.
+  return current.replace(/[<>]/g, '');
 }
 
 /**
- * Escapes HTML entities to prevent XSS attacks.
- * @param {string} input - The input string
- * @returns {string} - The escaped string safe for HTML insertion
+ * Escapes HTML entities to prevent XSS when interpolating into markup.
+ * @param {string} input
+ * @returns {string}
  */
 function escapeHtmlEntities(input) {
   if (typeof input !== 'string') return '';
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return escapeHtml(input);
 }
 
 /**
- * Sanitizes content for safe storage in the database.
- * Removes potentially dangerous characters while preserving readable text.
- * @param {string} input - The input string
- * @param {Object} options - Sanitization options
- * @param {boolean} options.allowLineBreaks - Allow newlines (default: true)
- * @param {boolean} options.trim - Trim whitespace (default: true)
- * @returns {string} - The sanitized string
+ * Sanitizes content for safe storage: strips markup and control characters.
+ * @param {string} input
+ * @param {Object} [options]
+ * @param {boolean} [options.allowLineBreaks=true] - Keep newlines
+ * @param {boolean} [options.trim=true] - Trim surrounding whitespace
+ * @param {number} [options.maxLength] - Truncate to at most this many characters
+ * @returns {string}
  */
 function sanitizeContent(input, options = {}) {
   if (typeof input !== 'string') return '';
-  
-  const { allowLineBreaks = true, trim = true } = options;
-  
-  let sanitized = input;
-  
-  // Remove null bytes
-  sanitized = sanitized.replace(/\0/g, '');
-  
-  // Remove control characters except newlines and tabs
+
+  const { allowLineBreaks = true, trim = true, maxLength } = options;
+
+  let sanitized = stripHtmlTags(input);
+  sanitized = sanitized.replace(allowLineBreaks ? CONTROL_CHARS_KEEP_BREAKS : CONTROL_CHARS, '');
+
   if (!allowLineBreaks) {
-    sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    sanitized = sanitized.replace(/[\r\n]+/g, ' ');
   } else {
-    sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    // Normalise line endings and collapse runs of blank lines.
+    sanitized = sanitized.replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n');
   }
-  
-  // Trim whitespace if requested
+
   if (trim) {
     sanitized = sanitized.trim();
   }
-  
+
+  if (Number.isInteger(maxLength) && maxLength > 0 && sanitized.length > maxLength) {
+    sanitized = sanitized.slice(0, maxLength);
+  }
+
   return sanitized;
 }
 
 /**
- * Validates and sanitizes a URL to prevent XSS and other attacks.
- * @param {string} url - The URL to validate
- * @returns {string|null} - The sanitized URL or null if invalid
+ * Sanitizes a single-line field (no markup, no line breaks).
+ * @param {string} input
+ * @param {number} [maxLength]
+ * @returns {string}
+ */
+function sanitizeLine(input, maxLength) {
+  return sanitizeContent(input, { allowLineBreaks: false, trim: true, maxLength });
+}
+
+/**
+ * Validates and normalises a URL, allowing only http(s).
+ * @param {string} url
+ * @returns {string|null}
  */
 function sanitizeUrl(url) {
   if (typeof url !== 'string') return null;
-  
+
   const trimmed = url.trim();
   if (!trimmed) return null;
-  
-  // Only allow http and https protocols
+
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
@@ -86,50 +113,60 @@ function sanitizeUrl(url) {
 }
 
 /**
- * Sanitizes user input for display in the admin dashboard.
- * Preserves basic formatting but removes dangerous content.
- * @param {string} input - The input string
- * @returns {string} - The sanitized string safe for display
+ * Validates and normalises a relative upload path or an absolute http(s) URL.
+ * Used for image fields, which may point at /uploads/... or an external host.
+ * @param {string} url
+ * @returns {string|null}
  */
-function sanitizeForDisplay(input) {
-  if (typeof input !== 'string') return '';
-  
-  return sanitizeContent(input, { allowLineBreaks: true, trim: false });
+function sanitizeImageUrl(url) {
+  if (typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+
+  // Relative upload paths, with no traversal or protocol trickery.
+  if (/^\/uploads\/[A-Za-z0-9._-]+$/.test(trimmed) && !trimmed.includes('..')) {
+    return trimmed;
+  }
+  if (/^\/images\/[A-Za-z0-9._-]+$/.test(trimmed) && !trimmed.includes('..')) {
+    return trimmed;
+  }
+
+  return sanitizeUrl(trimmed);
 }
 
 /**
  * Validates and sanitizes a name field.
- * @param {string} name - The name to validate
- * @param {Object} options - Validation options
- * @param {number} options.minLength - Minimum length (default: 1)
- * @param {number} options.maxLength - Maximum length (default: 100)
- * @returns {{ valid: boolean, value: string, error: string|null }} - Validation result
+ * @param {string} name
+ * @param {Object} [options]
+ * @param {number} [options.minLength=1]
+ * @param {number} [options.maxLength=100]
+ * @returns {{ valid: boolean, value: string, error: string|null }}
  */
 function sanitizeName(name, options = {}) {
   const { minLength = 1, maxLength = 100 } = options;
-  
+
   if (typeof name !== 'string') {
     return { valid: false, value: '', error: 'Name is required' };
   }
-  
-  const sanitized = sanitizeContent(name, { allowLineBreaks: false });
-  
+
+  const sanitized = sanitizeLine(name);
+
   if (sanitized.length < minLength) {
     return { valid: false, value: sanitized, error: `Name must be at least ${minLength} characters` };
   }
-  
+
   if (sanitized.length > maxLength) {
     return { valid: false, value: sanitized, error: `Name must be at most ${maxLength} characters` };
   }
-  
+
   return { valid: true, value: sanitized, error: null };
 }
 
 module.exports = {
   escapeHtmlEntities,
-  getPasswordStrengthErrors,
   sanitizeContent,
-  sanitizeForDisplay,
+  sanitizeImageUrl,
+  sanitizeLine,
   sanitizeName,
   sanitizeUrl,
   stripHtmlTags

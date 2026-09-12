@@ -83,37 +83,61 @@ async function logActivity({ db, userId, action, entityType, entityId, descripti
  * @param {Object} db - The database connection/pool
  */
 function createActivityLogger(db) {
-  return async function activityLogger(req, res, next) {
-    // Store the original json method
+  return function activityLogger(req, res, next) {
+    // GET/HEAD traffic is not worth an audit row.
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      next();
+      return;
+    }
+
+    let logged = false;
+
+    // res.json is wrapped rather than using an on-finish hook so the response
+    // body (which carries insertId for creates) is available to the log entry.
     const originalJson = res.json.bind(res);
-    
-    // Override json method to capture response
-    res.json = function(data) {
-      // Log activity for successful write operations
-      if (req.method !== 'GET' && req.method !== 'HEAD') {
-        const userId = req.userId;
-        const action = getActionFromRequest(req);
-        const entityType = getEntityTypeFromRequest(req);
-        const entityId = req.params?.id ? Number(req.params.id) : null;
-        const description = generateDescription(req, data);
-        
-        logActivity({
-          db,
-          userId,
-          action,
-          entityType,
-          entityId,
-          description,
-          ipAddress: req.ip,
-          requestId: req.id
-        });
+    res.json = function loggingJson(data) {
+      if (!logged) {
+        logged = true;
+
+        // Only successful writes are recorded; failures are already surfaced
+        // through the error handler and would flood the audit trail.
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          logActivity({
+            db,
+            userId: req.userId,
+            action: getActionFromRequest(req),
+            entityType: getEntityTypeFromRequest(req),
+            entityId: resolveEntityId(req, data),
+            description: generateDescription(req),
+            ipAddress: req.ip,
+            requestId: req.id
+          });
+        }
       }
-      
+
       return originalJson(data);
     };
-    
+
     next();
   };
+}
+
+/**
+ * Resolves the affected entity id: the route parameter for updates and
+ * deletes, or the id returned in the response body for creates.
+ */
+function resolveEntityId(req, data) {
+  const fromParams = req.params && req.params.id ? Number.parseInt(req.params.id, 10) : NaN;
+  if (Number.isSafeInteger(fromParams) && fromParams > 0) {
+    return fromParams;
+  }
+
+  const fromBody = data && typeof data === 'object' ? Number.parseInt(data.id, 10) : NaN;
+  if (Number.isSafeInteger(fromBody) && fromBody > 0) {
+    return fromBody;
+  }
+
+  return null;
 }
 
 /**
@@ -121,7 +145,9 @@ function createActivityLogger(db) {
  */
 function getActionFromRequest(req) {
   const method = req.method;
-  const path = req.path;
+  // The logger is mounted on the API router, so req.path is relative to it;
+  // originalUrl keeps the full path the client actually called.
+  const path = req.originalUrl || req.path;
   
   if (path.includes('/login')) return ActivityType.LOGIN;
   if (path.includes('/logout')) return ActivityType.LOGOUT;
@@ -160,7 +186,7 @@ function getActionFromRequest(req) {
  * Determines the entity type from the request
  */
 function getEntityTypeFromRequest(req) {
-  const path = req.path;
+  const path = req.originalUrl || req.path;
   
   if (path.includes('/members')) return 'member';
   if (path.includes('/transactions')) return 'transaction';
@@ -177,22 +203,20 @@ function getEntityTypeFromRequest(req) {
 /**
  * Generates a human-readable description from the request
  */
-function generateDescription(req, data) {
-  const method = req.method;
+function generateDescription(req) {
   const entityType = getEntityTypeFromRequest(req);
-  const entityId = req.params?.id;
-  
-  const parts = [];
-  parts.push(`${method} ${req.path}`);
-  
+  const entityId = req.params && req.params.id;
+
+  const parts = [`${req.method} ${req.originalUrl || req.path}`];
+
   if (entityType) {
     parts.push(`on ${entityType}`);
   }
-  
+
   if (entityId) {
     parts.push(`#${entityId}`);
   }
-  
+
   return parts.join(' ');
 }
 

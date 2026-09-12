@@ -204,6 +204,32 @@
     }
   }
 
+  /**
+   * Mirrors the server's password policy (backend/utils/validation.js).
+   *
+   * The reset form previously only checked `length >= 8` while the server also
+   * demanded upper, lower, digit and symbol, so valid-looking passwords came
+   * back as an opaque "Invalid request".
+   *
+   * @param {string} password
+   * @returns {string[]} - Human-readable failures; empty when acceptable
+   */
+  function validatePasswordStrength(password) {
+    const errors = [];
+    if (typeof password !== 'string' || !password) {
+      return ['Password is required'];
+    }
+    if (password.length < 8) errors.push('Password must be at least 8 characters');
+    if (password.length > 128) errors.push('Password must be at most 128 characters');
+    if (!/[A-Z]/.test(password)) errors.push('Password must contain at least one uppercase letter');
+    if (!/[a-z]/.test(password)) errors.push('Password must contain at least one lowercase letter');
+    if (!/[0-9]/.test(password)) errors.push('Password must contain at least one number');
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      errors.push('Password must contain at least one special character');
+    }
+    return errors;
+  }
+
   function debounce(fn, delay) {
     let timeout;
     return function(...args) {
@@ -235,54 +261,79 @@
 
   function renderPublicChrome() {
     if (window.location.pathname.startsWith('/admin')) return;
+
     const header = document.querySelector('header');
-    const footer = document.querySelector('footer');
-    if (!header || !footer) return;
+    if (!header) return;
 
     const nav = header.querySelector('nav');
     if (!nav) return;
 
-    header.classList.remove('bg-surface', 'border-b', 'border-outline-variant');
-    header.classList.add('bg-primary', 'text-on-primary');
-
-    const navLinks = nav.querySelectorAll('a');
-    navLinks.forEach(a => {
-      a.classList.remove('text-on-surface', 'hover:text-on-surface');
-      a.classList.add('text-on-primary', 'hover:text-on-primary/80');
+    // Only the active-link marker is applied here. This function used to
+    // force `bg-primary text-on-primary` onto every public header, overriding
+    // the per-page designs (several pages use a light header on purpose).
+    nav.querySelectorAll('a[href]').forEach(a => {
       const href = a.getAttribute('href');
-      if (href && (href === window.location.pathname || (href !== '/' && window.location.pathname.startsWith(href)))) {
-        a.classList.add('font-black');
+      const path = window.location.pathname;
+      const isActive = href === path || (href !== '/' && href.length > 1 && path.startsWith(href));
+      a.classList.toggle('font-black', Boolean(isActive));
+      if (isActive) {
+        a.setAttribute('aria-current', 'page');
+      } else {
+        a.removeAttribute('aria-current');
       }
-    });
-
-    const logoText = header.querySelector('.logo-text');
-    if (logoText) {
-      logoText.classList.remove('text-on-surface');
-      logoText.classList.add('text-on-primary');
-    }
-
-    footer.classList.remove('bg-surface', 'text-on-surface');
-    footer.classList.add('bg-primary', 'text-on-primary');
-
-    const footerLinks = footer.querySelectorAll('a');
-    footerLinks.forEach(a => {
-      a.classList.remove('text-on-surface', 'hover:text-primary');
-      a.classList.add('text-on-primary', 'hover:text-on-primary/80');
     });
   }
 
   function updateFooterYear() {
-    const currentYear = new Date().getFullYear();
-    const copyrightElements = document.querySelectorAll('[data-copyright-year]');
-    copyrightElements.forEach(el => {
+    const currentYear = String(new Date().getFullYear());
+
+    // Explicit opt-in markers are updated directly.
+    document.querySelectorAll('[data-copyright-year]').forEach(el => {
       el.textContent = currentYear;
     });
-    const genericYear = document.querySelectorAll('footer span, footer p, footer div');
-    genericYear.forEach(el => {
-      if (el.textContent.includes('©') && el.textContent.match(/\d{4}/)) {
-        el.textContent = el.textContent.replace(/\d{4}/, String(currentYear));
+
+    // Otherwise find the copyright year in the footer and rewrite only that
+    // text node.
+    //
+    // The previous implementation matched every `footer div` and assigned to
+    // `el.textContent`, which meant the OUTERMOST matching div - the one
+    // wrapping the whole footer - had its entire subtree replaced by a single
+    // flattened string, destroying the layout and every link inside it.
+    // Walking text nodes touches the year and nothing else.
+    // NodeFilter.SHOW_TEXT is 4; read it defensively so the helper also runs
+    // under DOM implementations that do not expose the global.
+    const SHOW_TEXT = (typeof NodeFilter !== 'undefined' && NodeFilter.SHOW_TEXT) || 4;
+
+    document.querySelectorAll('footer').forEach(footer => {
+      const walker = document.createTreeWalker(footer, SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue.includes('©') && /\b(19|20)\d{2}\b/.test(node.nodeValue)) {
+          node.nodeValue = node.nodeValue.replace(/\b(19|20)\d{2}\b/, currentYear);
+        }
       }
     });
+  }
+
+  /**
+   * Public pages that are shorter than the viewport used to leave the footer
+   * floating mid-screen with blank space beneath it. Promoting the page to a
+   * flex column and letting <main> grow pins the footer to the bottom.
+   */
+  function applyStickyFooter() {
+    const body = document.body;
+    const footer = document.querySelector('footer');
+    if (!body || !footer || footer.parentElement !== body) return;
+
+    body.classList.add('min-h-screen', 'flex', 'flex-col');
+
+    const main = body.querySelector(':scope > main');
+    if (main) {
+      main.classList.add('flex-1');
+    } else {
+      // No <main>: make the footer itself the element pushed to the bottom.
+      footer.classList.add('mt-auto');
+    }
   }
 
   CMS.shared = {
@@ -299,12 +350,15 @@
     showEmptyState,
     showErrorState,
     debounce,
+    validatePasswordStrength,
     normalizeAdminSidebar,
     renderPublicChrome,
     updateFooterYear,
+    applyStickyFooter,
     init: function() {
       this.normalizeAdminSidebar();
       this.renderPublicChrome();
+      this.applyStickyFooter();
       this.updateFooterYear();
     }
   };

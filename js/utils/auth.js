@@ -17,9 +17,22 @@
   }
 
   function logout() {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('currentUser');
-    window.location.href = '/admin/login';
+    // Tell the server to revoke the token before dropping it locally, so the
+    // JWT cannot be replayed for the remainder of its 7-day lifetime.
+    var finish = function() {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      window.location.href = '/admin/login';
+    };
+
+    if (!getAuthToken()) {
+      finish();
+      return;
+    }
+
+    CMS.api.apiRequest('/auth/logout', { method: 'POST' })
+      .catch(function() { /* revoke is best-effort; always clear locally */ })
+      .then(finish, finish);
   }
 
   function getAuthToken() {
@@ -45,6 +58,23 @@
     return true;
   }
 
+  /**
+   * Reads the cached user's role. Used only to hide controls the user cannot
+   * use - the server re-checks every permission on each request.
+   */
+  function getRole() {
+    var user = getCurrentUser();
+    return user && user.role ? user.role : null;
+  }
+
+  var ROLE_RANK = { viewer: 0, editor: 1, admin: 2, super_admin: 3 };
+
+  function hasRole(minimumRole) {
+    var role = getRole();
+    if (!role) return false;
+    return (ROLE_RANK[role] || 0) >= (ROLE_RANK[minimumRole] || 0);
+  }
+
   function isAuthenticated() {
     return !!getAuthToken();
   }
@@ -55,7 +85,9 @@
     getAuthToken: getAuthToken,
     getCurrentUser: getCurrentUser,
     requireAuth: requireAuth,
-    isAuthenticated: isAuthenticated
+    isAuthenticated: isAuthenticated,
+    getRole: getRole,
+    hasRole: hasRole
   };
 
 })();

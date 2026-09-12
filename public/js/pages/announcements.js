@@ -129,7 +129,6 @@
   CMS.pages = CMS.pages || {};
   CMS.pages.announcements = {
     init: function() {
-      shared.init();
       loadAnnouncements(1);
       initFilterButtons();
       initSearch();

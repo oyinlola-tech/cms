@@ -50,7 +50,6 @@
   CMS.pages = CMS.pages || {};
   CMS.pages.gallery = {
     init: function() {
-      shared.init();
       var self = this;
       loadGallery(1).then(function() {
         var loadMoreBtn = document.getElementById('load-more-btn');

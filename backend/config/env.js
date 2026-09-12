@@ -36,6 +36,10 @@ function createConfig({ rootDir }) {
     isProduction,
     jwtSecret: process.env.JWT_SECRET || '',
     corsOrigins: splitCsv(process.env.CORS_ORIGIN),
+    // Number of reverse-proxy hops to trust for req.ip. Left at 0 (disabled)
+    // unless explicitly configured: trusting X-Forwarded-For when nothing is
+    // stripping it lets any client spoof their address and evade rate limits.
+    trustProxy: Number.parseInt(process.env.TRUST_PROXY_HOPS || '0', 10) || 0,
     smtp: {
       host: process.env.SMTP_HOST || '',
       port: Number.parseInt(process.env.SMTP_PORT || '587', 10) || 587,
@@ -81,6 +85,31 @@ function validateConfig(config) {
     } else {
       warnings.push(message);
     }
+  }
+
+  // An empty CORS allow-list means "reflect any origin". That is fine for local
+  // development but must never ship, so it is a hard failure in production.
+  if (config.corsOrigins.length === 0) {
+    if (config.isProduction) {
+      errors.push('CORS_ORIGIN must list at least one allowed origin in production.');
+    } else {
+      warnings.push('CORS_ORIGIN is empty - all origins are allowed (development only).');
+    }
+  }
+
+  for (const origin of config.corsOrigins) {
+    try {
+      const parsed = new URL(origin);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        errors.push(`CORS_ORIGIN entry "${origin}" must use http or https.`);
+      }
+    } catch (_) {
+      errors.push(`CORS_ORIGIN entry "${origin}" is not a valid origin URL.`);
+    }
+  }
+
+  if (config.isProduction && config.trustProxy === 0) {
+    warnings.push('TRUST_PROXY_HOPS is 0. Set it to the number of proxies in front of the app so rate limiting sees real client IPs.');
   }
 
   return { errors, warnings };

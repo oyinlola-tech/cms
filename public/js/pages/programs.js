@@ -120,7 +120,6 @@
   CMS.pages = CMS.pages || {};
   CMS.pages.programs = {
     init: function() {
-      shared.init();
       Promise.all([
         fetchUpcomingPrograms(),
         fetchPastPrograms(),
