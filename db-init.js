@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 const DB_NAME = process.env.DB_NAME || 'church_db';
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 12;
 
 function query(connection, sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -43,6 +43,8 @@ async function createTables(connection) {
       password VARCHAR(255) NOT NULL,
       role VARCHAR(50) DEFAULT 'viewer',
       avatar VARCHAR(500),
+      is_active BOOLEAN DEFAULT TRUE,
+      token_version INT NOT NULL DEFAULT 0,
       twofa_enabled BOOLEAN DEFAULT FALSE,
       last_login TIMESTAMP NULL,
       last_ip VARCHAR(45),
@@ -55,8 +57,10 @@ async function createTables(connection) {
       token VARCHAR(100),
       otp VARCHAR(6),
       expires_at TIMESTAMP NOT NULL,
+      used_at TIMESTAMP NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      INDEX(email)
+      INDEX(email),
+      INDEX(expires_at)
     )`,
     `CREATE TABLE IF NOT EXISTS church_info (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,7 +98,8 @@ async function createTables(connection) {
       related_member_id INT NOT NULL,
       relationship VARCHAR(50),
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
-      FOREIGN KEY (related_member_id) REFERENCES members(id) ON DELETE CASCADE
+      FOREIGN KEY (related_member_id) REFERENCES members(id) ON DELETE CASCADE,
+      UNIQUE KEY unique_household_link (member_id, related_member_id)
     )`,
     `CREATE TABLE IF NOT EXISTS attendance (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -125,7 +130,9 @@ async function createTables(connection) {
       FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL,
       INDEX(transaction_date),
       INDEX(type),
-      INDEX(created_at)
+      INDEX(created_at),
+      INDEX(member_id, transaction_date),
+      INDEX(type, status, transaction_date)
     )`,
     `CREATE TABLE IF NOT EXISTS expense_categories (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -182,7 +189,8 @@ async function createTables(connection) {
       FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
       INDEX(status),
       INDEX(published_at),
-      INDEX(created_at)
+      INDEX(created_at),
+      INDEX(status, scheduled_for)
     )`,
     `CREATE TABLE IF NOT EXISTS gallery (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -250,6 +258,40 @@ async function createTables(connection) {
     await query(connection, sql);
   }
   console.log('All tables verified/created.');
+
+  await applyColumnMigrations(connection);
+}
+
+/**
+ * CREATE TABLE IF NOT EXISTS leaves existing installs on the old schema, so
+ * columns added after the first release are applied here. Each one is checked
+ * against information_schema first, which keeps this safe to re-run.
+ */
+async function applyColumnMigrations(connection) {
+  const migrations = [
+    { table: 'users', column: 'is_active', ddl: 'ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE' },
+    { table: 'users', column: 'token_version', ddl: 'ALTER TABLE users ADD COLUMN token_version INT NOT NULL DEFAULT 0' },
+    { table: 'password_resets', column: 'used_at', ddl: 'ALTER TABLE password_resets ADD COLUMN used_at TIMESTAMP NULL' }
+  ];
+
+  let applied = 0;
+  for (const migration of migrations) {
+    const existing = await query(
+      connection,
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+      [DB_NAME, migration.table, migration.column]
+    );
+    if (existing.length === 0) {
+      await query(connection, migration.ddl);
+      console.log(`Migrated: ${migration.table}.${migration.column} added.`);
+      applied += 1;
+    }
+  }
+
+  if (applied === 0) {
+    console.log('Schema already up to date.');
+  }
 }
 
 // Insert default church info if empty
@@ -312,12 +354,12 @@ async function insertDefaultAdmin(connection) {
     console.warn('WARNING: ADMIN_PASSWORD looks weak/default. Change it before deploying to production.');
   }
 
-  const results = await query(connection, 'SELECT id FROM users WHERE email = ?', [adminEmail]);
+  const results = await query(connection, 'SELECT id FROM users WHERE email = ?', [adminEmail.toLowerCase()]);
   if (results.length === 0) {
     const hashed = await bcrypt.hash(adminPassword, SALT_ROUNDS);
     await query(connection,
       `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
-      [adminName, adminEmail, hashed, 'admin']
+      [adminName, adminEmail.toLowerCase(), hashed, 'super_admin']
     );
     console.log(`Default admin user created: ${adminEmail}`);
   } else {

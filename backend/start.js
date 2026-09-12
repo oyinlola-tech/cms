@@ -4,6 +4,7 @@ const path = require('path');
 const { initializeDatabase } = require('../db-init');
 const { createConfig, validateConfig } = require('./config/env');
 const { createApp } = require('./app');
+const { startScheduler } = require('./services/scheduler');
 
 async function startServer() {
   const rootDir = path.resolve(__dirname, '..');
@@ -24,6 +25,9 @@ async function startServer() {
   const db = await initializeDatabase();
   const { app } = createApp({ config, db });
 
+  // Publishes announcements whose scheduled_for time has arrived.
+  const scheduler = startScheduler({ db });
+
   const server = app.listen(config.port, () => {
     console.log(`\nServer running at http://localhost:${config.port}`);
     console.log(`Environment: ${config.nodeEnv}`);
@@ -42,7 +46,9 @@ async function startServer() {
     isShuttingDown = true;
     
     console.log(`\n${signal} received. Starting graceful shutdown...`);
-    
+
+    scheduler.stop();
+
     // Stop accepting new connections
     server.close(() => {
       console.log('HTTP server closed.');
@@ -74,13 +80,15 @@ async function startServer() {
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   
   // Handle uncaught errors
+  // After an uncaught exception the process state is unknown, so shut down
+  // rather than continuing to serve requests from a corrupted runtime.
   process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
     gracefulShutdown('uncaughtException');
   });
-  
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
     gracefulShutdown('unhandledRejection');
   });
 
