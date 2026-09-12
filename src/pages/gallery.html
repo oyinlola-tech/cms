@@ -142,30 +142,39 @@
   </section>
 
   <!-- Pagination -->
-  <footer class="mt-16 flex items-center justify-between pt-8 border-t border-outline-variant/30">
+  <nav aria-label="Gallery pagination" class="mt-16 flex flex-wrap items-center justify-between gap-4 pt-8 border-t border-outline-variant/30">
     <p id="gallery-pagination-info" class="text-sm font-medium text-on-surface-variant">Showing -- of -- images</p>
-    <div class="flex gap-2" id="gallery-pagination-controls">
-      <!-- Pagination buttons rendered by JS -->
-    </div>
-  </footer>
+    <div class="flex flex-wrap gap-2" id="gallery-pagination-controls"></div>
+  </nav>
 
-  <!-- Footer -->
-  <footer class="mt-16 w-full py-12 bg-primary text-on-primary rounded-xl">
-    <div class="px-6 max-w-7xl mx-auto">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-        <div class="md:col-span-1">
-          <h3 class="font-['Noto_Serif'] text-2xl font-black">The Sacred Hearth</h3>
-          <p class="text-on-primary/50 text-sm mt-1">Okitipupa Parish CMS</p>
+  <footer class="mt-16 rounded-xl bg-primary text-on-primary overflow-hidden">
+    <div class="px-6 sm:px-8 pt-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-6">
+        <div>
+          <h2 class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Sacred Hearth CMS</h2>
+          <p class="mt-3 font-body text-sm text-on-primary/55">Okitipupa Parish &middot; Administration</p>
         </div>
-        <div class="md:col-span-1 flex justify-center gap-6 flex-wrap">
-          <a class="text-on-primary/60 hover:text-on-primary text-sm transition-colors duration-300" href="/admin/dashboard">Dashboard</a>
-          <a class="text-on-primary/60 hover:text-on-primary text-sm transition-colors duration-300" href="/admin/members">Members</a>
-          <a class="text-on-primary/60 hover:text-on-primary text-sm transition-colors duration-300" href="/admin/finance">Finance</a>
-          <a class="text-on-primary/60 hover:text-on-primary text-sm transition-colors duration-300" href="/admin/settings">Settings</a>
-        </div>
-        <div class="md:col-span-1 text-right text-on-primary/40 text-xs">
-          &copy; 2026 The Sacred Hearth Okitipupa. All Rights Reserved.
-        </div>
+        <nav aria-label="Dashboard" class="flex flex-wrap gap-x-7 gap-y-3">
+          <a href="/admin/dashboard" class="font-body text-sm text-on-primary/60 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Dashboard</a>
+          <a href="/admin/members" class="font-body text-sm text-on-primary/60 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Members</a>
+          <a href="/admin/finance" class="font-body text-sm text-on-primary/60 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Finance</a>
+          <a href="/admin/settings" class="font-body text-sm text-on-primary/60 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Settings</a>
+        </nav>
+      </div>
+
+      <div aria-hidden="true" class="overflow-hidden pt-8 -mb-1 sm:-mb-2">
+        <p class="select-none whitespace-nowrap font-headline font-black leading-[0.8] tracking-[-0.045em] text-on-primary/[0.09] text-[clamp(1.75rem,7vw,5rem)]">
+          <span class="align-super font-body text-[0.26em] font-extrabold tracking-[0.12em]">The</span>Sacred Hearth
+        </p>
+      </div>
+    </div>
+
+    <div class="border-t border-on-primary/10">
+      <div class="px-6 sm:px-8 py-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p class="font-body text-xs text-on-primary/40">
+          &copy; <span data-copyright-year>2026</span> The Sacred Hearth &middot; Okitipupa Parish
+        </p>
+        <a href="/" class="font-body text-xs text-on-primary/40 hover:text-on-primary/70 focus-visible:text-on-primary/70 focus-visible:outline-none transition-colors motion-reduce:transition-none">View public site &rarr;</a>
       </div>
     </div>
   </footer>

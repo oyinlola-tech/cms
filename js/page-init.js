@@ -38,6 +38,16 @@
       }
     }
 
+    // The footer's weekly rail is shared by every public page, so it is
+    // hydrated here rather than from each page module.
+    if (window.CMS.footer && typeof window.CMS.footer.init === 'function') {
+      try {
+        window.CMS.footer.init();
+      } catch (error) {
+        console.error('Footer init failed:', error);
+      }
+    }
+
     var pageName = document.body ? document.body.getAttribute('data-page') : null;
     if (!pageName) return;
 

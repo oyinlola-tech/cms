@@ -137,56 +137,112 @@
   </section>
 </main>
 
-<footer class="bg-primary text-on-primary w-full">
-  <div class="max-w-7xl mx-auto px-8 pt-20 pb-12">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
-      <div class="lg:col-span-5 space-y-6">
-        <h2 class="font-['Noto_Serif'] text-5xl md:text-6xl font-black leading-[0.95] tracking-tight">
-          The Sacred<br/>Hearth
-        </h2>
-        <p class="text-on-primary/60 text-lg font-body leading-relaxed max-w-sm">
-          Okitipupa Parish<br/>Connecting the people through faith, charity, and community service.
-        </p>
-        <div class="flex items-center gap-2 text-on-primary/50 text-sm">
-          <span class="material-symbols-outlined text-base">location_on</span>
-          12 Cathedral Way, Okitipupa, Ondo State
+<footer class="bg-primary text-on-primary">
+
+  <!-- The week. A parish footer's real job: when is the next service. -->
+  <div class="mx-auto max-w-7xl px-6 sm:px-8 pt-16 sm:pt-20">
+    <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-on-primary/10 pb-4">
+      <h2 class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">
+        This week at the Hearth
+      </h2>
+      <a href="/programs" class="group font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/60 hover:text-secondary-container focus-visible:text-secondary-container focus-visible:outline-none transition-colors motion-reduce:transition-none">
+        Full calendar
+        <span aria-hidden="true" class="inline-block transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none">&rarr;</span>
+      </a>
+    </div>
+
+    <ul id="footer-week" class="grid grid-cols-1 sm:grid-cols-3 divide-y divide-on-primary/10 sm:divide-y-0 sm:divide-x">
+      <li class="footer-week-slot relative py-6 sm:py-0 sm:px-6 first:sm:pl-0 last:sm:pr-0">
+        <div class="flex items-baseline justify-between gap-3">
+          <p class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Sunday</p>
         </div>
-      </div>
-      <div class="lg:col-span-2">
-        <h4 class="font-bold text-xs uppercase tracking-widest text-on-primary/40 mb-5">Explore</h4>
-        <ul class="space-y-3">
-          <li><a href="/" class="text-on-primary/80 hover:text-on-primary text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 group">Home <span class="opacity-0 group-hover:opacity-100 transition-opacity text-sm">&rarr;</span></a></li>
-          <li><a href="/programs" class="text-on-primary/80 hover:text-on-primary text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 group">Programs <span class="opacity-0 group-hover:opacity-100 transition-opacity text-sm">&rarr;</span></a></li>
-          <li><a href="/announcements" class="text-on-primary/80 hover:text-on-primary text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 group">Announcements <span class="opacity-0 group-hover:opacity-100 transition-opacity text-sm">&rarr;</span></a></li>
-          <li><a href="/gallery" class="text-on-primary/80 hover:text-on-primary text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 group">Gallery <span class="opacity-0 group-hover:opacity-100 transition-opacity text-sm">&rarr;</span></a></li>
-          <li><a href="/contact" class="text-on-primary/80 hover:text-on-primary text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 group">Contact <span class="opacity-0 group-hover:opacity-100 transition-opacity text-sm">&rarr;</span></a></li>
+        <p class="mt-3 font-headline font-black leading-none tracking-tight text-on-primary">
+          <span class="text-[2rem] sm:text-[2.25rem] tabular-nums">8:00</span><span class="ml-1.5 font-body text-xs font-extrabold tracking-[0.1em] align-top">AM</span>
+        </p>
+        <p class="mt-2 font-body text-sm text-on-primary/55">Divine Worship</p>
+      </li>
+      <li class="footer-week-slot relative py-6 sm:py-0 sm:px-6 first:sm:pl-0 last:sm:pr-0">
+        <div class="flex items-baseline justify-between gap-3">
+          <p class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Wednesday</p>
+        </div>
+        <p class="mt-3 font-headline font-black leading-none tracking-tight text-on-primary">
+          <span class="text-[2rem] sm:text-[2.25rem] tabular-nums">5:00</span><span class="ml-1.5 font-body text-xs font-extrabold tracking-[0.1em] align-top">PM</span>
+        </p>
+        <p class="mt-2 font-body text-sm text-on-primary/55">Prayer Hour</p>
+      </li>
+      <li class="footer-week-slot relative py-6 sm:py-0 sm:px-6 first:sm:pl-0 last:sm:pr-0">
+        <div class="flex items-baseline justify-between gap-3">
+          <p class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Friday</p>
+        </div>
+        <p class="mt-3 font-headline font-black leading-none tracking-tight text-on-primary">
+          <span class="text-[2rem] sm:text-[2.25rem] tabular-nums">10:00</span><span class="ml-1.5 font-body text-xs font-extrabold tracking-[0.1em] align-top">PM</span>
+        </p>
+        <p class="mt-2 font-body text-sm text-on-primary/55">Vigil (Monthly)</p>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Directory. Columns answer: where do I go, what should I read, how do I reach you. -->
+  <div class="mx-auto max-w-7xl px-6 sm:px-8 mt-14 pt-12 border-t border-on-primary/10">
+    <div class="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-12">
+      <nav class="lg:col-span-3" aria-labelledby="footer-visit">
+        <h2 id="footer-visit" class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Visit</h2>
+        <ul class="mt-5 space-y-3">
+          <li><a href="/" class="font-body text-[15px] text-on-primary/75 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Home</a></li>
+          <li><a href="/programs" class="font-body text-[15px] text-on-primary/75 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Programs</a></li>
+          <li><a href="/gallery" class="font-body text-[15px] text-on-primary/75 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Gallery</a></li>
         </ul>
-      </div>
-      <div class="lg:col-span-2">
-        <h4 class="font-bold text-xs uppercase tracking-widest text-on-primary/40 mb-5">Resources</h4>
-        <ul class="space-y-3">
-          <li><a href="/privacy" class="text-on-primary/80 hover:text-on-primary text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 group">Privacy Policy <span class="opacity-0 group-hover:opacity-100 transition-opacity text-sm">&rarr;</span></a></li>
-          <li><a href="/terms" class="text-on-primary/80 hover:text-on-primary text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 group">Terms of Service <span class="opacity-0 group-hover:opacity-100 transition-opacity text-sm">&rarr;</span></a></li>
-          <li><a href="/give" class="text-on-primary/80 hover:text-on-primary text-base font-medium transition-colors duration-300 inline-flex items-center gap-1 group">Give Online <span class="opacity-0 group-hover:opacity-100 transition-opacity text-sm">&rarr;</span></a></li>
+      </nav>
+
+      <nav class="lg:col-span-3" aria-labelledby="footer-parish">
+        <h2 id="footer-parish" class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Parish</h2>
+        <ul class="mt-5 space-y-3">
+          <li><a href="/announcements" class="font-body text-[15px] text-on-primary/75 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Announcements</a></li>
+          <li><a href="/give" class="font-body text-[15px] text-on-primary/75 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Give</a></li>
+          <li><a href="/contact" class="font-body text-[15px] text-on-primary/75 hover:text-on-primary focus-visible:text-on-primary focus-visible:outline-none transition-colors motion-reduce:transition-none">Contact</a></li>
         </ul>
+      </nav>
+
+      <div class="col-span-2 sm:col-span-1 lg:col-span-3">
+        <h2 class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">Find us</h2>
+        <address class="mt-5 not-italic font-body text-[15px] leading-relaxed text-on-primary/75">
+          12 Cathedral Way<br/>Okitipupa, Ondo State
+        </address>
       </div>
-      <div class="lg:col-span-3">
-        <h4 class="font-bold text-xs uppercase tracking-widest text-on-primary/40 mb-5">Stay Connected</h4>
-        <p class="text-on-primary/60 text-base mb-6 leading-relaxed">Join our congregation for weekly services, community events, and spiritual growth.</p>
-        <a href="/contact" class="inline-flex items-center gap-2 px-8 py-4 bg-secondary-container text-on-secondary-fixed rounded-full font-bold hover:opacity-90 transition-opacity duration-300 text-base">
-          Get In Touch
-          <span class="material-symbols-outlined text-lg">arrow_forward</span>
+
+      <div class="col-span-2 sm:col-span-3 lg:col-span-3 lg:justify-self-end lg:text-right">
+        <h2 class="font-body text-[10px] font-black uppercase tracking-[0.22em] text-on-primary/40">New here?</h2>
+        <p class="mt-5 font-body text-[15px] leading-relaxed text-on-primary/75 lg:max-w-[15rem]">
+          Come as you are. Tell us you're coming and someone will meet you at the door.
+        </p>
+        <a href="/contact" class="group mt-6 inline-flex items-center gap-2 rounded-full bg-secondary-container px-7 py-3.5 font-body text-sm font-bold text-on-secondary-fixed hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-container focus-visible:ring-offset-2 focus-visible:ring-offset-primary transition-opacity motion-reduce:transition-none">
+          Plan your visit
+          <span aria-hidden="true" class="inline-block transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none">&rarr;</span>
         </a>
       </div>
     </div>
   </div>
-  <div class="border-t border-on-primary/10">
-    <div class="max-w-7xl mx-auto px-8 py-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-      <p class="text-on-primary/40 text-sm">&copy; 2026 The Sacred Hearth Okitipupa. All Rights Reserved.</p>
-      <div class="flex gap-6">
-        <a href="/privacy" class="text-on-primary/40 hover:text-on-primary/70 text-sm transition-colors">Privacy</a>
-        <a href="/terms" class="text-on-primary/40 hover:text-on-primary/70 text-sm transition-colors">Terms</a>
-        <a href="/contact" class="text-on-primary/40 hover:text-on-primary/70 text-sm transition-colors">Support</a>
+
+  <!-- Sign-off. The wordmark is set tonally and allowed to run off the edge. -->
+  <div class="mt-16 border-t border-on-primary/10">
+    <div class="mx-auto max-w-7xl px-6 sm:px-8">
+      <div aria-hidden="true" class="overflow-hidden pt-10 -mb-2 sm:-mb-3 lg:-mb-5">
+        <p class="select-none whitespace-nowrap font-headline font-black leading-[0.8] tracking-[-0.045em] text-on-primary/[0.09] text-[clamp(2.25rem,11vw,9rem)]">
+          <span class="align-super font-body text-[0.26em] font-extrabold tracking-[0.12em]">The</span>Sacred Hearth
+        </p>
+      </div>
+    </div>
+
+    <div class="border-t border-on-primary/10">
+      <div class="mx-auto max-w-7xl px-6 sm:px-8 py-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="font-body text-xs text-on-primary/40">
+          &copy; <span data-copyright-year>2026</span> The Sacred Hearth &middot; Okitipupa Parish
+        </p>
+        <nav aria-label="Legal" class="flex gap-6">
+          <a href="/privacy" class="font-body text-xs text-on-primary/40 hover:text-on-primary/70 focus-visible:text-on-primary/70 focus-visible:outline-none transition-colors motion-reduce:transition-none">Privacy</a>
+          <a href="/terms" class="font-body text-xs text-on-primary/40 hover:text-on-primary/70 focus-visible:text-on-primary/70 focus-visible:outline-none transition-colors motion-reduce:transition-none">Terms</a>
+          <a href="/contact" class="font-body text-xs text-on-primary/40 hover:text-on-primary/70 focus-visible:text-on-primary/70 focus-visible:outline-none transition-colors motion-reduce:transition-none">Support</a>
+        </nav>
       </div>
     </div>
   </div>
@@ -196,6 +252,7 @@
 <script src="/js/utils/api.js" defer></script>
 <script src="/js/utils/auth.js" defer></script>
 <script src="/js/pages/home.js" defer></script>
+<script src="/js/footer.js" defer></script>
 <script src="/js/page-init.js" defer></script>
 </body>
 </html>
