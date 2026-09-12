@@ -109,7 +109,7 @@ function createAuthRouter({ db, config, rateLimiters, authenticate, emailService
   }));
 
   router.post('/reset-password', resetPasswordLimiter, asyncHandler(async (req, res) => {
-    const { token, newPassword } = req.body || {};
+    const { token, newPassword, email } = req.body || {};
     if (typeof token !== 'string' || !isStrongEnoughPassword(newPassword)) {
       res.status(400).json({ message: 'Invalid request' });
       return;

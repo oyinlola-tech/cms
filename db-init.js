@@ -41,7 +41,7 @@ async function createTables(connection) {
       name VARCHAR(100) NOT NULL,
       email VARCHAR(100) UNIQUE NOT NULL,
       password VARCHAR(255) NOT NULL,
-      role VARCHAR(50) DEFAULT 'admin',
+      role VARCHAR(50) DEFAULT 'viewer',
       avatar VARCHAR(500),
       twofa_enabled BOOLEAN DEFAULT FALSE,
       last_login TIMESTAMP NULL,
@@ -85,7 +85,8 @@ async function createTables(connection) {
       avatar VARCHAR(500),
       is_active BOOLEAN DEFAULT TRUE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX(created_at)
     )`,
     `CREATE TABLE IF NOT EXISTS family_members (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -123,7 +124,8 @@ async function createTables(connection) {
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL,
       INDEX(transaction_date),
-      INDEX(type)
+      INDEX(type),
+      INDEX(created_at)
     )`,
     `CREATE TABLE IF NOT EXISTS expense_categories (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -150,7 +152,8 @@ async function createTables(connection) {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX(start_datetime),
-      INDEX(status)
+      INDEX(status),
+      INDEX(created_at)
     )`,
     `CREATE TABLE IF NOT EXISTS weekly_schedule (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -178,7 +181,8 @@ async function createTables(connection) {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
       INDEX(status),
-      INDEX(published_at)
+      INDEX(published_at),
+      INDEX(created_at)
     )`,
     `CREATE TABLE IF NOT EXISTS gallery (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -191,7 +195,8 @@ async function createTables(connection) {
       uploaded_by INT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
-      INDEX(is_featured)
+      INDEX(is_featured),
+      INDEX(created_at)
     )`,
     `CREATE TABLE IF NOT EXISTS contact_messages (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -201,7 +206,8 @@ async function createTables(connection) {
       subject VARCHAR(100),
       message TEXT NOT NULL,
       is_read BOOLEAN DEFAULT FALSE,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX(created_at)
     )`,
     `CREATE TABLE IF NOT EXISTS contact_replies (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -231,8 +237,12 @@ async function createTables(connection) {
       entity_id INT,
       description TEXT,
       ip_address VARCHAR(45),
+      request_id VARCHAR(36),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+      INDEX(created_at),
+      INDEX(user_id),
+      INDEX(entity_type, entity_id)
     )`
   ];
 
@@ -344,34 +354,44 @@ async function initializeDatabase() {
     // Close initial connection
     await new Promise(resolve => initConn.end(resolve));
 
-    // Create main connection with database selected
-    const dbConnection = mysql.createConnection({
+    // Create connection pool with database selected
+    const pool = mysql.createPool({
       host: process.env.DB_HOST || 'localhost',
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || 'mysql',
       database: DB_NAME,
-      multipleStatements: true
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0
     });
 
-    await new Promise((resolve, reject) => {
-      dbConnection.connect(err => {
-        if (err) reject(err);
-        else resolve();
+    // Promisify the pool query method
+    const poolQuery = (sql, params) => {
+      return new Promise((resolve, reject) => {
+        pool.query(sql, params, (error, results) => {
+          if (error) reject(error);
+          else resolve(results);
+        });
       });
-    });
-    console.log(`Connected to database "${DB_NAME}".`);
+    };
+
+    // Test the pool connection
+    await poolQuery('SELECT 1');
+    console.log(`Connected to database "${DB_NAME}" (pool established).`);
 
     // Create tables
-    await createTables(dbConnection);
+    await createTables(pool);
 
     // Insert default data
-    await insertDefaultChurchInfo(dbConnection);
-    await insertDefaultWeeklySchedule(dbConnection);
-    await insertDefaultExternalLinks(dbConnection);
-    await insertDefaultAdmin(dbConnection);
+    await insertDefaultChurchInfo(pool);
+    await insertDefaultWeeklySchedule(pool);
+    await insertDefaultExternalLinks(pool);
+    await insertDefaultAdmin(pool);
 
     console.log('Database initialization complete.');
-    return dbConnection;
+    return pool;
   } catch (error) {
     console.error('Database initialization failed:', error.message);
     throw error;

@@ -1,7 +1,8 @@
 const express = require('express');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
-const { isValidEmail, parseId, parseLimit, parsePage } = require('../utils/validation');
+const { buildSafeUpdateSet, isValidEmail, parseId, parseLimit, parsePage, validateColumns } = require('../utils/validation');
+const { requireRole } = require('../middleware/rbac');
 
 function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) {
   const router = express.Router();
@@ -328,10 +329,10 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
       return;
     }
 
-    const allowed = [
+    const allowed = new Set([
       'first_name', 'last_name', 'email', 'phone', 'address', 'dob', 'gender', 'marital_status',
       'occupation', 'member_type', 'department', 'baptism_status', 'joined_date', 'is_active'
-    ];
+    ]);
 
     const fields = {};
     for (const key of allowed) {
@@ -359,16 +360,23 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
       return;
     }
 
-    const params = keys.map((key) => {
+    const validKeys = validateColumns(keys, allowed);
+    if (!validKeys) {
+      res.status(400).json({ message: 'Invalid field' });
+      return;
+    }
+
+    const params = validKeys.map((key) => {
       if (key === 'email' && typeof fields[key] === 'string') return fields[key].trim().toLowerCase();
       return fields[key];
     });
     params.push(id);
 
     try {
+      const { sql: setClause } = buildSafeUpdateSet(validKeys, fields);
       const result = await query(
         db,
-        `UPDATE members SET ${keys.map((key) => `${key} = ?`).join(', ')} WHERE id = ?`,
+        `UPDATE members SET ${setClause} WHERE id = ?`,
         params
       );
 
@@ -387,7 +395,7 @@ function createMembersRouter({ db, authenticate, rateLimiters, uploadService }) 
     }
   }));
 
-  router.delete('/members/:id', authenticate, rateLimiters.adminWrite, asyncHandler(async (req, res) => {
+  router.delete('/members/:id', authenticate, requireRole('admin'), rateLimiters.adminWrite, asyncHandler(async (req, res) => {
     const id = parseId(req.params.id);
     if (!id) {
       res.status(400).json({ message: 'Invalid member id' });

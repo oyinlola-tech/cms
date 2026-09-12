@@ -9,7 +9,7 @@
   var debounce = shared ? shared.debounce : function(fn) { return fn; };
 
   function loadChurchInfo() {
-    return api.apiRequest('/contact/info').then(function(data) {
+    return api.apiRequest('/church/info').then(function(data) {
       renderChurchInfo(data);
     }).catch(function(error) {
       console.error('Failed to load contact info:', error);

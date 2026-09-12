@@ -1,6 +1,6 @@
 const express = require('express');
 const { asyncHandler } = require('../utils/async-handler');
-const { query } = require('../utils/db');
+const { query, transaction } = require('../utils/db');
 const { escapeHtml, isSafeHttpUrl, percentChange } = require('../utils/format');
 const { parseId, parseLimit, parsePage } = require('../utils/validation');
 
@@ -246,12 +246,14 @@ function createAdminCoreRouter({ db, authenticate, rateLimiters, emailService })
       return;
     }
 
-    await query(
-      db,
-      'INSERT INTO contact_replies (contact_message_id, replied_by, to_email, subject, message) VALUES (?, ?, ?, ?, ?)',
-      [id, req.userId, original.email, subject, message]
-    );
-    await query(db, 'UPDATE contact_messages SET is_read = 1 WHERE id = ?', [id]);
+    // Use transaction to ensure both queries succeed or fail together
+    await transaction(db, async (txQuery) => {
+      await txQuery(
+        'INSERT INTO contact_replies (contact_message_id, replied_by, to_email, subject, message) VALUES (?, ?, ?, ?, ?)',
+        [id, req.userId, original.email, subject, message]
+      );
+      await txQuery('UPDATE contact_messages SET is_read = 1 WHERE id = ?', [id]);
+    });
 
     res.json({ message: 'Reply sent' });
   }));

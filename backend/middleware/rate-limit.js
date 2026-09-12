@@ -109,12 +109,12 @@ function createRateLimiters() {
       windowMs: 10 * 60_000,
       max: 5,
       identifier: (req) => {
-        try {
-          if(req.body?.token) {
-            const payload = JSON.parse(Buffer.from(req.body.token.split('.')[1], 'base64').toString());
-            return String(payload.email || '').trim().toLowerCase();
-          }
-        } catch(e) {}
+        // Use email from body if available, otherwise fall back to IP-based identifier
+        // Never parse unverified JWTs for rate limiting
+        const email = req.body?.email;
+        if (typeof email === 'string' && email.trim()) {
+          return email.trim().toLowerCase();
+        }
         return '';
       }
     }),

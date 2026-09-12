@@ -4,7 +4,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
-const { parseId, parseLimit, parsePage } = require('../utils/validation');
+const { buildSafeUpdateSet, parseId, parseLimit, parsePage, validateColumns } = require('../utils/validation');
 
 function createAdminContentRouter({ db, authenticate, rateLimiters, uploadService }) {
   const router = express.Router();
@@ -151,10 +151,10 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       return;
     }
 
-    const allowed = [
+    const allowed = new Set([
       'title', 'description', 'type', 'category', 'location', 'start_datetime', 'end_datetime',
       'recurring', 'recurring_until', 'schedule', 'is_main_service', 'is_featured', 'status', 'display_order'
-    ];
+    ]);
     const fields = {};
     for (const key of allowed) {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) {
@@ -173,7 +173,13 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       return;
     }
 
-    const params = keys.map((key) => {
+    const validKeys = validateColumns(keys, allowed);
+    if (!validKeys) {
+      res.status(400).json({ message: 'Invalid field' });
+      return;
+    }
+
+    const params = validKeys.map((key) => {
       if (key === 'is_main_service' || key === 'is_featured') return fields[key] ? 1 : 0;
       if (key === 'display_order') return Number.isFinite(Number(fields[key])) ? Number(fields[key]) : 0;
       if (typeof fields[key] === 'string') return fields[key].trim();
@@ -181,7 +187,8 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
     });
     params.push(id);
 
-    const result = await query(db, `UPDATE programs SET ${keys.map((key) => `${key} = ?`).join(', ')} WHERE id = ?`, params);
+    const { sql: setClause } = buildSafeUpdateSet(validKeys, fields);
+    const result = await query(db, `UPDATE programs SET ${setClause} WHERE id = ?`, params);
     if (result.affectedRows === 0) {
       res.status(404).json({ message: 'Program not found' });
       return;
@@ -334,7 +341,7 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       return;
     }
 
-    const allowed = ['title', 'summary', 'content', 'category', 'image_url', 'priority', 'status', 'scheduled_for', 'is_new', 'is_featured'];
+    const allowed = new Set(['title', 'summary', 'content', 'category', 'image_url', 'priority', 'status', 'scheduled_for', 'is_new', 'is_featured']);
     const fields = {};
     for (const key of allowed) {
       if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) {
@@ -367,14 +374,21 @@ function createAdminContentRouter({ db, authenticate, rateLimiters, uploadServic
       return;
     }
 
-    const params = keys.map((key) => {
+    const validKeys = validateColumns(keys, allowed);
+    if (!validKeys) {
+      res.status(400).json({ message: 'Invalid field' });
+      return;
+    }
+
+    const params = validKeys.map((key) => {
       if (key === 'is_new' || key === 'is_featured') return fields[key] ? 1 : 0;
       if (typeof fields[key] === 'string') return fields[key].trim();
       return fields[key];
     });
     params.push(id);
 
-    const result = await query(db, `UPDATE announcements SET ${keys.map((key) => `${key} = ?`).join(', ')} WHERE id = ?`, params);
+    const { sql: setClause } = buildSafeUpdateSet(validKeys, fields);
+    const result = await query(db, `UPDATE announcements SET ${setClause} WHERE id = ?`, params);
     if (result.affectedRows === 0) {
       res.status(404).json({ message: 'Announcement not found' });
       return;

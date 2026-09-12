@@ -1,7 +1,7 @@
 const express = require('express');
 const { asyncHandler } = require('../utils/async-handler');
 const { query } = require('../utils/db');
-const { isValidEmail, parseLimit, parsePage } = require('../utils/validation');
+const { isValidEmail, parseId, parseLimit, parsePage } = require('../utils/validation');
 
 function createPublicRouter({ db, rateLimiters }) {
   const router = express.Router();
@@ -51,7 +51,12 @@ function createPublicRouter({ db, rateLimiters }) {
   }));
 
   router.get('/announcements/:id', readLimiter, asyncHandler(async (req, res) => {
-    const results = await query(db, 'SELECT * FROM announcements WHERE id = ?', [req.params.id]);
+    const id = parseId(req.params.id);
+    if (!id) {
+      res.status(400).json({ message: 'Invalid announcement id' });
+      return;
+    }
+    const results = await query(db, 'SELECT * FROM announcements WHERE id = ?', [id]);
     if (results.length === 0) {
       res.status(404).json({ message: 'Not found' });
       return;
